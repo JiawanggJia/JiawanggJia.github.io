@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>OpenJDK 编译指南 | Keaper&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1593882398715">
+<link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="本篇文章主要介绍在MacOS系统和Ubuntu系统上如何编译OpenJDK项目代码，并使用IDE工具JetBrains CLion（下文简称CLion）来运行/调试OpenJDK。文中仅包含两种操作系统的特定版本（MacOS 10.15和U..." />
+    <meta name="keywords" content="JAVA" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://jiawanggjia.github.io">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1593882398715" class="site-logo">
+        <h1 class="site-title">Keaper&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/J-keaper" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      帝都码农一枚
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://jiawanggjia.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">OpenJDK 编译指南</h2>
+            <div class="post-date">2020-06-28</div>
+            
+            <div class="post-content" v-pre>
+              <p>本篇文章主要介绍在<code>MacOS</code>系统和<code>Ubuntu</code>系统上如何编译<code>OpenJDK</code>项目代码，并使用<code>IDE</code>工具<code>JetBrains CLion</code>（下文简称<code>CLion</code>）来运行/调试<code>OpenJDK</code>。文中仅包含两种操作系统的特定版本（<code>MacOS 10.15</code>和<code>Ubuntu 16.04</code>）下的方法，不同版本下可能会略有差异。希望对读者有一定的参考价值。</p>
+<p>总体来说，编译<code>OpenJDK11</code>在两种系统上都没有太大的阻碍，难度低于<code>OpenJDK8</code>。编译<code>OpenJDK8</code>在<code>Ubuntu</code>上比较简单，在<code>MacOS</code>上比较繁琐复杂。</p>
+<h1 id="编译调试openjdk的基本步骤">编译调试OpenJDK的基本步骤</h1>
+<p>完成编译并实现调试<code>OpenJDK</code>流程可以分为以下几个步骤：</p>
+<ol>
+<li>获取<code>OpenJDK</code>项目源代码</li>
+<li>下载一个合适版本的<code>JDK</code>作为<code>BootJDK</code></li>
+<li>下载所需工具链，包括编译器、调试器、构建工具等</li>
+<li>下载所需依赖库</li>
+<li><code>Running Configure</code>（配置）</li>
+<li><code>Running Make</code>（构建）</li>
+<li>导入<code>CLion</code>并进行<code>Run/Debug</code>配置</li>
+</ol>
+<p>其中3-6步对于不同操作系统和不同<code>OpenJDK</code>版本差异较大，其余步骤差异较小，所以本文的行文顺序是先将1-2、7三部分以及一些前置知识做详细介绍。在之后的具体场景（不同操作系统 + 不同<code>OpenJDK</code>版本）中针对对这些部分只做差异点的特殊说明。</p>
+<h1 id="开始之前">开始之前</h1>
+<h2 id="如何获取-openjdk-源代码">如何获取 OpenJDK 源代码？</h2>
+<p>编译调试的第一步当然是获取到<code>OpenJDK</code>的源代码，获取方式主要有以下三种：</p>
+<h3 id="1-通过openjdk官方的mercurial仓库下载">1. 通过<code>OpenJDK</code>官方的<code>Mercurial</code>仓库下载</h3>
+<p><code>OpenJDK</code>官方使用<code>Mercurial</code>来进行版本控制。<code>Mercurial</code>仓库地址：<a href="http://hg.openjdk.java.net/">http://hg.openjdk.java.net/</a>，主要项目地址：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>地址</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jdk</td>
+<td><a href="http://hg.openjdk.java.net/jdk/jdk">http://hg.openjdk.java.net/jdk/jdk</a></td>
+</tr>
+<tr>
+<td>jdk8u</td>
+<td><a href="http://hg.openjdk.java.net/jdk8u/jdk8u/">http://hg.openjdk.java.net/jdk8u/jdk8u/</a></td>
+</tr>
+<tr>
+<td>jdk11u</td>
+<td><a href="https://hg.openjdk.java.net/jdk-updates/jdk11u/">https://hg.openjdk.java.net/jdk-updates/jdk11u/</a></td>
+</tr>
+</tbody>
+</table>
+<p>通过这种方式下载源代码，需要先安装<code>Mercurial</code>工具，并使用<code>hg clone &lt;url&gt;</code>下载源代码。比如下载	<code>jdk8u</code>使用如下命令：</p>
+<pre><code class="language-bash">hg clone http://hg.openjdk.java.net/jdk8u/jdk8u/
+</code></pre>
+<p>这种方式下载比较慢，而且会有中断的情况，<strong>不推荐使用</strong>。</p>
+<h3 id="2-通过镜像git仓库下载">2. 通过镜像<code>Git</code>仓库下载</h3>
+<p>OpenJDK官方在<code>GitHub</code>上有JDK项目的仓库镜像，主页地址：<a href="https://github.com/openjdk">https://github.com/openjdk</a>，主要项目地址：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>地址</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jdk</td>
+<td><a href="https://github.com/openjdk/jdk">https://github.com/openjdk/jdk</a></td>
+</tr>
+<tr>
+<td>jdk11u</td>
+<td><a href="https://github.com/openjdk/jdk11u">https://github.com/openjdk/jdk11u</a></td>
+</tr>
+<tr>
+<td>jdk12u</td>
+<td><a href="https://github.com/openjdk/jdk12u">https://github.com/openjdk/jdk12u</a></td>
+</tr>
+</tbody>
+</table>
+<p>但在官方<code>git</code>仓库中没有看到 <code>jdk11</code> 以下的版本。</p>
+<p>除此之外还有一些非官方的镜像<code>Git</code>仓库。比如<code>AdoptOpenJDK</code>项目，主页地址：<a href="https://github.com/AdoptOpenJDK/">https://github.com/AdoptOpenJDK/</a>，主要项目地址：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>地址</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>jdk</td>
+<td><a href="https://github.com/AdoptOpenJDK/openjdk-jdk">https://github.com/AdoptOpenJDK/openjdk-jdk</a></td>
+</tr>
+<tr>
+<td>jdk8u</td>
+<td><a href="https://github.com/AdoptOpenJDK/openjdk-jdk8u">https://github.com/AdoptOpenJDK/openjdk-jdk8u</a></td>
+</tr>
+<tr>
+<td>jdk11u</td>
+<td><a href="https://github.com/AdoptOpenJDK/openjdk-jdk11u">https://github.com/AdoptOpenJDK/openjdk-jdk11u</a></td>
+</tr>
+</tbody>
+</table>
+<p>使用这种方式需要安装<code>git</code>工具，并使用<code>git clone &lt;url&gt;</code>下载源代码。比如下载<code>jdk8u</code>使用如下命令：</p>
+<pre><code class="language-bash">git clone https://github.com/AdoptOpenJDK/openjdk-jdk8u
+</code></pre>
+<p><code>git</code>工具使用方便，并且比从官方<code>Mercurial</code>仓库下载要快很多，<strong>推荐使用</strong>。</p>
+<h3 id="3-下载mercurial仓库或者git仓库-打包文件">3. 下载<code>Mercurial</code>仓库或者<code>Git</code>仓库 打包文件</h3>
+<p>除此之外，<code>OpenJDK</code>官方的<code>Mercurial</code>仓库还提供了直接下载压缩包的入口，入口在各个项目页面左侧<code>bz2</code>,<code>zip</code>,<code>gz</code>三个链接，点击即可下载。如下图所示：<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200627100725.png" alt="" loading="lazy"></p>
+<p>同样在<code>GitHub</code>上的每个项目都可以下载<code>ZIP</code>格式的打包文件。如下图所示：<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200701092215.png" alt="" loading="lazy"></p>
+<p>显然这种方式的缺点是缺少版本控制的能力，如果对项目代码进行了改动想要恢复是做不到的，也不能够方便地获取最新代码改动，但是相比前两种方式更下载更快，也不要任何额外工具。</p>
+<h2 id="如何下载jdk">如何下载JDK？</h2>
+<p>让人觉得矛盾的是，编译JDK之前我们需要一个已经编译好的<code>JDK</code>作为<code>Boot JDK</code>。一般需要的<code>JDK</code>版本是编译版本前一版本的<code>JDK</code>，比如编译<code>JDK8</code>需要<code>JDK7</code>,编译<code>JDK11</code>需要<code>JDK10</code>。<br>
+有几种途径可以下载<code>JDK</code>：</p>
+<ol>
+<li>在<a href="https://www.oracle.com/java/technologies/oracle-java-archive-downloads.html">Oracle官网</a>下载 <code>Oracle JDK</code>。下载需要登录账号</li>
+<li>下载<code>OpenJDK</code>
+<ul>
+<li>在<a href="https://jdk.java.net/">https://jdk.java.net/</a>可以找到<code>Oracle</code>提供的基于<code>OpenJDK</code>的参考实现。但大部分只有<code>Linux</code>版本<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200701092647.png" alt="" loading="lazy"><br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200701092748.png" alt="" loading="lazy"></li>
+<li>也可以使用其他组织预编译好的<code>OpenJDK</code>。比如<a href="https://adoptopenjdk.net/">AdoptOpenJDK</a>，但是没有<code>jdk8</code>以下版本</li>
+</ul>
+</li>
+<li>在<code>Linux</code>系统下，还可以通过软件包管理器(比如<code>Ubuntu</code>下的<code>apt</code>，<code>Centos</code>下的<code>yum</code>)下载安装<code>JDK</code></li>
+</ol>
+<h2 id="json-compilation-database">JSON Compilation Database</h2>
+<p><code>CLion</code>对<code>CMake</code>构建的项目支持很友好，但<code>OpenJDK</code>项目是基于<code>Make</code>构建的，对于使用<code>Make</code>构建的项目，<code>CLion</code>仍然可以通过<code>Compilation Database</code>来导入项目，而不用将其修改为<code>CMake</code>项目。同时也能通过<code>Compilation Database</code>实现代码的分析、跳转等功能，这对于我们进行代码调试很有帮助。</p>
+<p>有关于<code>Compilation Database</code>的介绍可以参考这几篇文章：</p>
+<ul>
+<li><code>Clang</code>官方的<code>Compilation Database</code>介绍页面：<a href="https://clang.llvm.org/docs/JSONCompilationDatabase.html">JSON Compilation Database Format Specification — Clang 11 documentation</a></li>
+<li>这篇文章介绍了在不同场景下生成<code>Compilation database</code>的各种工具：<a href="https://sarcasm.github.io/notes/dev/compilation-database.html">Compilation database — Sarcasm notebook</a></li>
+<li><code>CLion</code>的帮助页面简要介绍了<code>Compilation Database</code>，以及在<code>CLion</code>的使用：<a href="https://www.jetbrains.com/help/clion/compilation-database.html">Compilation Database - Help | CLion</a></li>
+</ul>
+<p>对于基于<code>Make</code>构建的<code>OpenJDK</code>项目来说，有一些工具可以生成<code>Compilation Database</code>，比如下面几个：</p>
+<ul>
+<li><a href="https://github.com/rizsotto/Bear">https://github.com/rizsotto/Bear</a></li>
+<li><a href="https://github.com/rizsotto/scan-build">https://github.com/rizsotto/scan-build</a></li>
+<li><a href="https://github.com/nickdiego/compiledb">https://github.com/nickdiego/compiledb</a></li>
+</ul>
+<p>通常默认生成的<code>Compilation Database</code>是一个<code>compile_commands.json</code>文件。</p>
+<p>除此之外，在<code>OpenJDK 11u</code>及之后版本中，<code>OpenJDK</code>官方提供了对于<code>IDE</code>的支持，可以使用<code>make compile-commands</code>命令生成<code>Compilation Database</code>，不需要使用额外的工具，具体命令可以查看看源代码目录下的<a href="https://github.com/openjdk/jdk11u/blob/master/doc/ide.md"><code>\doc\ide.md</code></a></p>
+<h2 id="如何将openjdk项目导入clion中并运行调试">如何将OpenJDK项目导入CLion中并运行/调试</h2>
+<blockquote>
+<p>读者可以选择先跳过本小节，然后在完成前面几个步骤之后再来根据本小节进行导入调试。</p>
+</blockquote>
+<p>对于如何在<code>CLion</code>中管理基于<code>Make</code>构建的项目，<code>CLion</code>的官方帮助文档中有详细的介绍：<br>
+<a href="https://www.jetbrains.com/help/clion/managing-makefile-projects.html">Managing Makefile Projects</a>。</p>
+<p>参考上述文档，本小节简要介绍了如何在<code>CLion</code>中导入<code>OpenJDK</code>项目并运行/调试的方法。请注意小节中所展示的图示是基于<code>Ubuntu 16.04</code>系统 + <code>CLion 2020.1.1</code> 环境下的，操作步骤基本也适用于<code>MacOS 系统</code>下同版本的<code>CLion</code>。</p>
+<ol>
+<li>
+<p>下载安装<code>CLion</code>，并安装<code>Makefile Support</code>插件。建议使用最新版本，比较老的版本是不支持<code>Make</code>构建的项目的。</p>
+</li>
+<li>
+<p>导入项目。打开<code>CLion</code>，选择<code>Open Or Import</code>，选择项目目录中的<code>compile_commands.json</code>文件，弹出框选择<code>Open as Project</code>，等待文件索引完成。</p>
+<blockquote>
+<p><code>compile_commands.json</code>的生成方法及生成位置根据不同的<code>OpenJDK</code>版本略有不同，具体位置请看下文具体场景的介绍。</p>
+</blockquote>
+<figure data-type="image" tabindex="1"><img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200614173939.gif" alt="" loading="lazy"></figure>
+</li>
+<li>
+<p>创建自定义<code>Build Target</code>。点击<code>File</code>菜单栏，<code>Settings | Build, Execution, Deployment | Custom Build Targets</code>，点击<code>+</code>新建一个	<code>Target</code>。</p>
+<ul>
+<li><code>Name</code>：<code>Target</code>的名字，之后在创建<code>Run/Debug</code>配置的时候会看到这个名字</li>
+<li>点击<code>Build</code>或者<code>Clean</code>右边的三点，弹出框中点击<code>+</code>新建两个<code>External Tool</code>配置如下：<pre><code class="language-bash"># 第一个配置如下，用来指定构建指令
+# Program 和 Arguments 共同构成了所要执行的命令 &quot;make all&quot;
+Name: make
+Program: make
+Arguments: all
+Working directory: {项目的根目录}
+
+# 第二个配置如下，用来清理构建输出
+# Program 和 Arguments 共同构成了所要执行的命令 &quot;make clean&quot;
+Name: make clean
+Program: make
+Arguments: clean
+Working directory: {项目的根目录}
+</code></pre>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200614174833.gif" alt="" loading="lazy"></li>
+<li><code>ToolChain</code>选择<code>Default</code>；<code>Build</code>选择<code>make</code>（上面创建的第一个<code>External Tool</code>）；<code>Clean</code>选择<code>make clean</code>（上面创建的第二个<code>External Tool</code>）</li>
+</ul>
+<blockquote>
+<p>其中两个<code>External Tool</code>配置中<code>make</code>的参数可以根据需要改变。一般情况用于<code>Build</code>的配置与执行构建时<code>make</code>的<code>target</code>保持一致即可。</p>
+</blockquote>
+</li>
+<li>
+<p>创建自定义的<code>Run/Debug configuration</code>。点击<code>Run</code>菜单栏,<code>Edit Configurations</code>， 点击<code>+</code>，选择<code>Custom Build Application</code>，配置如下：</p>
+<pre><code class="language-bash"># Executable 和 Program arguments 可以根据需要调试的信息自行选择
+# NameL：Configure 的名称
+Name: linux-x86_64-normal-server-slowdebug
+# Target：选择上一步创建的 “Custom Build Target”
+Target: linux-x86_64-normal-server-slowdebug
+# Executable：程序执行入口，也就是需要调试的程序
+Executable: 这里我们调试`java`，选择`{source_root}/build/{build_name}/jdk/bin/java`。
+# Program arguments: 与 “Executable” 配合使用，指定其参数
+Program arguments: 这里我们选择`-version`，简单打印一下`java`版本。
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200614175414.gif" alt="" loading="lazy"></figure>
+<p>如果不想每次运行/调试前都执行<code>Build</code>操作（在这里就是<code>Make</code>构建过程，比较耗时），可以在编辑页下方<code>Before launch</code>框中删除<code>Build</code>条目。</p>
+</li>
+<li>
+<p>点击<code>Run</code>/<code>Debug</code>开始运行/调试。</p>
+<ul>
+<li>如果使用的调试器是<code>gdb</code>（<code>Ubuntu</code>下默认），调试的时候可能会发现<code>gdb</code>报错：<code>Signal: SIGSEGV (Segmentation fault)</code>。解决办法是，创建用户家目录创建<code>.gdbinit</code>，内容如下：<pre><code class="language-bash">handle SIGSEGV pass noprint nostop
+handle SIGBUS pass noprint nostop
+</code></pre>
+</li>
+<li>如果使用的调试器是<code>lldb</code>（<code>MacOS</code>下默认），调试的时候可能会发现<code>lldb</code>报错：<code>SIGSEGV (signal SIGSEGV)</code>。解决办法是，在用户家目录创建<code>.lldbinit</code>，内容如下：<pre><code class="language-bash">break set -n main -C &quot;process handle --pass true --stop false SIGSEGV&quot; -C &quot;process handle --pass true --stop false SIGBUS&quot;
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>配合<code>File Watchers</code>插件自动更新<code>Compilation Database</code>（可选）</p>
+<p>如果修改了项目代码，需要重新生成<code>Compilation Database</code>，一般情况需要重新构建才可以。</p>
+<p>如果不想每次都重新手动构建，可以使用<code>Files Watcher</code>插件来实现监听变更自动重新生成。详见：<a href="https://www.jetbrains.com/help/clion/managing-makefile-projects.html#filewatcher-plugin">https://www.jetbrains.com/help/clion/managing-makefile-projects.html#filewatcher-plugin</a></p>
+</li>
+</ol>
+<h1 id="ubuntu-1604-环境">Ubuntu 16.04 环境</h1>
+<h2 id="openjdk-8">OpenJDK 8</h2>
+<h3 id="1-下载openjdk8源代码">1. 下载OpenJDK8源代码</h3>
+<p>我们这里选择从<code>AdoptOpenJDK</code>的<code>GitHub</code>仓库下载源代码。</p>
+<pre><code class="language-bash"># 首先需要安装git工具（如果没有的话）
+sudo apt-get install git
+# 克隆项目代码，可能耗时较长
+git clone git@github.com:AdoptOpenJDK/openjdk-jdk8u.git
+</code></pre>
+<h3 id="2-安装工具链及依赖">2. 安装工具链及依赖</h3>
+<pre><code class="language-bash"># 首先需要下载安装 JDK7 作为 BootJDK
+方法见上文
+# 安装编译器及构建工具
+sudo apt-get install gcc g++ gdb make
+# 下载安装依赖包
+sudo apt-get install libasound2-dev libfreetype6-dev libcups2-dev libfontconfig1-dev libxext-dev libxrender-dev libxtst-dev libxt-dev
+</code></pre>
+<h3 id="3-配置及构建">3. 配置及构建</h3>
+<pre><code class="language-bash"># 首先进入 OpenJDK8 源码目录
+# 配置
+sh ./configure --with-debug-level=slowdebug --disable-zip-debug-info --with-target-bits=64 --with-boot-jdk=/home/jiajiawang/software/jdk/jdk1.7.0_80 --with-freetype-include=/usr/include/freetype2 --with-freetype-lib=/usr/lib/x86_64-linux-gnu/
+</code></pre>
+<p><code>configure</code>参数说明：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--with-debug-level</td>
+<td>调试信息的级别，可选值有<code>release</code>,<code>fastdebug</code>,<code>slowdebug</code></td>
+</tr>
+<tr>
+<td>--disable-zip-debug-info</td>
+<td>禁止压缩调试信息，设置为true有助于调试</td>
+</tr>
+<tr>
+<td>--with-target-bits</td>
+<td>选择32位或者64位，根据操作系统选择</td>
+</tr>
+<tr>
+<td>--with-boot-jdk</td>
+<td><code>BootJDK</code>的位置</td>
+</tr>
+<tr>
+<td>--with-freetype-include <br>--with-freetype-lib</td>
+<td>指定<code>freetype</code>依赖位置，如果提示找不到<code>freetype</code>，需要配置这两个参数</td>
+</tr>
+</tbody>
+</table>
+<p>参数的更多说明及更多参数请参考：<a href="http://hg.openjdk.java.net/jdk8u/jdk8u/raw-file/tip/README-builds.html#configure">OpenJDK 8 Build README - Configure</a></p>
+<p>我们可以使用两种工具来生成<code>Compilation Database</code></p>
+<h4 id="使用bear工具">使用Bear工具</h4>
+<pre><code class="language-bash"># 下载Bear工具
+sudo apt-get install bear
+# 构建，并使用bear工具生成Compilation Database
+bear make all
+</code></pre>
+<h4 id="使用compiledb工具">使用compiledb工具</h4>
+<pre><code class="language-bash"># 需要保证有python环境
+# 安装pip
+sudo apt-get install python-pip
+# pip安装 compiledb
+pip install compiledb
+# 构建，并使用compiledb工具生成Compilation Database
+compiledb make all
+</code></pre>
+<p>更多<code>make</code>的<code>target</code>请参考<a href="http://hg.openjdk.java.net/jdk8u/jdk8u/raw-file/tip/README-builds.html#make">OpenJDK 8 Build README - Make</a></p>
+<p>如果没有报错，完成之后应该可以在<code>./build/linux-x86_64-normal-server-slowdebug/jdk</code>目录下找到编译之后的<code>JDK</code>，验证一下是否成功</p>
+<pre><code class="language-bash">~: cd build/linux-x86_64-normal-server-slowdebug/jdk/bin/
+~: ./java -version
+openjdk version &quot;1.8.0-internal-debug&quot;
+......
+</code></pre>
+<p>同时项目根目录下应该同时有一个<code>compile_commands.json</code>文件，并且不为空。</p>
+<h3 id="4-导入clion并调试">4. 导入CLion并调试</h3>
+<p>步骤参见上文</p>
+<h2 id="openjdk-11">OpenJDK 11</h2>
+<h3 id="1-下载openjdk11源代码">1. 下载OpenJDK11源代码</h3>
+<pre><code class="language-bash"># 首先需要安装git工具（如果没有的话）
+sudo apt-get install git
+# 克隆项目代码，可能耗时较长
+git clone git@github.com:AdoptOpenJDK/openjdk-jdk11u.git
+</code></pre>
+<h3 id="2-安装工具链及依赖-2">2. 安装工具链及依赖</h3>
+<pre><code class="language-bash"># 需要下载安装 JDK10 作为 BootJDK
+方法见上文
+# 安装编译器及构建工具
+sudo apt-get install gcc g++ gdb make autoconf
+# 下载安装依赖包
+sudo apt-get install libfreetype6-dev libcups2-dev
+sudo apt-get install libx11-dev libxext-dev libxrender-dev libxrandr-dev libxtst-dev libxt-dev
+sudo apt-get install libasound2-dev libffi-dev
+sudo apt-get install libfontconfig1-dev
+</code></pre>
+<h3 id="3-配置及构建-2">3. 配置及构建</h3>
+<pre><code class="language-bash"># 配置
+sh ./configure --with-debug-level=slowdebug --with-native-debug-symbols=internal --with-target-bits=64 --with-boot-jdk=/home/jiajiawang/software/jdk/jdk-10.0.2
+</code></pre>
+<blockquote>
+<p>如果不成功，一般可能是缺少部分依赖，根据脚本给出的提示安装相应依赖即可。</p>
+</blockquote>
+<p><code>configure</code>参数说明：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--with-debug-level</td>
+<td>调试信息的级别，可选值有<code>release</code>,<code>fastdebug</code>,<code>slowdebug</code></td>
+</tr>
+<tr>
+<td>--with-native-debug-symbols</td>
+<td>指定如何构建<code>debug symbol</code>，可选值有<code>none</code>,<code>internal</code>, <code>external</code>, <code>zipped</code>，设置为<code>internal</code>可以更好地调试</td>
+</tr>
+<tr>
+<td>--with-target-bits</td>
+<td>选择32位或者64位，根据操作系统选择</td>
+</tr>
+<tr>
+<td>--with-boot-jdk</td>
+<td><code>bootjdk</code>位置</td>
+</tr>
+<tr>
+<td>--with-freetype-include <br>--with-freetype-lib</td>
+<td>指定<code>freetype</code>依赖位置。如果提示找不到<code>freetype</code>，需要配置这两个参数</td>
+</tr>
+</tbody>
+</table>
+<p>参数的更多说明及更多参数请参考：<a href="http://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html#running-configure">OpenJDK 11 Build README - Configure</a></p>
+<pre><code class="language-bash"># 生成Compilation Database
+make compile-commands
+# 构建
+make all
+</code></pre>
+<p>更多<code>make</code>的<code>target</code>请参考<a href="http://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html#running-make">OpenJDK 11 Build README - Make</a></p>
+<p>完成之后应该可以在<code>./build/linux-x86_64-normal-server-slowdebug/jdk</code>目录下找到编译之后的jdk，验证一下是否成功</p>
+<pre><code class="language-bash">~: cd build/linux-x86_64-normal-server-slowdebug/jdk/bin/
+~: ./java -version
+openjdk version &quot;11.0.8-internal&quot; 2020-07-14
+......
+</code></pre>
+<p>同时在<code>/build/linux-x86_64-normal-server-slowdebug/</code>目录下会有<code>compile_commands.json</code>文件，并且不为空。</p>
+<h3 id="4-导入clion并调试-2">4. 导入CLion并调试</h3>
+<p>大致步骤与前文介绍相同。<br>
+需要注意的是在选择<code>/build/linux-x86_64-normal-server-slowdebug/</code>目录下的<code>compile_commands.json</code>文件导入项目之后需要更改项目的根目录为<code>源码的根目录</code>（这里也就是<code>openjdk-11u</code>目录）。点击菜单<code>Tools | Compilation Database | Change Project Root</code>，选择<code>源码根目录</code>（<code>openjdk-11u</code>），等待重新索引完成。<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200615091032.gif" alt="" loading="lazy"></p>
+<h1 id="macos-1015-环境">MacOS 10.15 环境</h1>
+<h2 id="openjdk-8-2">OpenJDK 8</h2>
+<blockquote>
+<p><code>MacOS 10.15.5</code>环境下构建<code>OpenJDK</code>与<code>Linux</code>下步骤相似，但是由于<code>OpenJDK 8</code>版本较老，其中一些依赖在<code>MacOS 10.15.5</code>版本中已经无法找到，导致在配置构建过程中会出现各种问题，本文给出了一种比较简单方便的办法。</p>
+</blockquote>
+<h3 id="1-下载openjdk8源代码-2">1. 下载OpenJDK8源代码</h3>
+<p>我们选择从<code>AdoptOpenJDK</code>的<code>github</code>仓库下载源代码</p>
+<pre><code class="language-bash">git clone git@github.com:AdoptOpenJDK/openjdk-jdk8u.git
+</code></pre>
+<h3 id="2-安装工具链及依赖-3">2. 安装工具链及依赖</h3>
+<ol>
+<li>首先需要下载安装<code>jdk7</code>作为<code>bootjdk</code>，方法见文章开头。</li>
+<li>安装<code>HomeBrew</code>。<code>Homebrew</code>是一款<code>MacOS</code>系统上的软件包管理系统。<pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)&quot;
+</code></pre>
+</li>
+<li>安装<code>Xcode</code>。可以直接在<code>App Store</code>搜索安装，也可以在<a href="https://developer.apple.com/download/more/">https://developer.apple.com/download/more/</a>下载离线安装包安装。可以使用<code>xcodebuild</code>命令验证是否安装成功，正确输出版本号则表明正确安装。<pre><code class="language-bash">xcodebuild -version
+</code></pre>
+如果是离线安装的话，可能会报<code>xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance</code>错误，这是因为<code>xcodebuild</code>找不到新安装的<code>Xcode</code>，只需要执行下面这个命令即可。<pre><code>sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer/
+</code></pre>
+</li>
+<li>安装编译工具<pre><code class="language-bash"># 安装构建工具
+brew install make
+</code></pre>
+</li>
+<li>安装所需依赖<pre><code class="language-bash"># 安装freetype
+brew install freetype
+</code></pre>
+</li>
+</ol>
+<h3 id="3-配置及构建-3">3. 配置及构建</h3>
+<h4 id="31-修改代码">3.1 修改代码</h4>
+<p>如果不对代码进行修改，在执行<code>configure</code>的时候，会报各种错误。网上也有很多针对每种错误来修改源文件来解决报错的方法， 这里给出一种更为方便的方法。<br>
+<code>GitHub</code>上的<a href="https://github.com/stooke/jdk8u-xcode10">stooke/jdk8u-xcode10</a>这个项目，提供了对<code>openjdk8</code>的代码进行修改的<code>patch</code>文件，对代码修改之后，就可以正常地<code>configure</code>。</p>
+<pre><code class="language-bash">git clone git@github.com:stooke/jdk8u-xcode10.git
+</code></pre>
+<p>这个项目本身提供了脚本来完成下载源码、下载依赖、代码修改、配置、编译、测试等工作，但我们这里只使用其中的修改代码这部分。原项目中的<code>README</code>可能已经过时了，通过查看其源代码中的<code>build8.sh</code>文件，能够大概了解其中的执行逻辑，据此我将其中的修改<code>OpenJDK8</code>代码的部分抽取出来，简化如下：</p>
+<p>新建一个<code>shell</code>脚本<code>patch.sh</code>，内容如下：</p>
+<pre><code class="language-bash">#!/bin/bash
+# JDK8 源码所在目录
+JDK_DIR=`pwd`
+# 下载的jdk8u-xcode10项目所在目录
+PATCH_DIR=&quot;$(dirname $JDK_DIR)/jdk8u-xcode10&quot;
+PATCH_DIR=&quot;$PATCH_DIR/jdk8u-patch&quot;
+
+applypatch() {
+	cd &quot;$JDK_DIR/$1&quot;
+	echo &quot;applying $1 $2&quot;
+	patch -p1 &lt;$2
+}
+
+patchjdkbuild() {
+	echo &quot;patch jdk&quot;
+	# JDK-8019470: Changes needed to compile JDK 8 on MacOS with clang compiler
+	applypatch . &quot;$PATCH_DIR/jdk8u-8019470.patch&quot;
+
+	# JDK-8152545: Use preprocessor instead of compiling a program to generate native nio constants
+	# (fixes genSocketOptionRegistry build error on 10.8)
+	applypatch jdk &quot;$PATCH_DIR/jdk8u-jdk-8152545.patch&quot;
+
+	# fix WARNINGS_ARE_ERRORS handling
+	applypatch hotspot &quot;$PATCH_DIR/jdk8u-hotspot-8241285.patch&quot;
+
+	# fix some help messages and Xcode version checks
+	applypatch . &quot;$PATCH_DIR/jdk8u-buildfix1.patch&quot;
+	# use correct C++ standard library
+	#applypatch . &quot;$PATCH_DIR/jdk8u-libcxxfix.patch&quot;
+	# misc clang-specific cleanup
+	applypatch . &quot;$PATCH_DIR/jdk8u-buildfix2.patch&quot;
+
+	# misc clang-specific cleanup; doesn't apply cleanly on top of 8019470 
+	# (use -g1 for fastdebug builds)
+	#applypatch . &quot;$PATCH_DIR/jdk8u-buildfix2a.patch&quot;
+
+	# fix for clang crash if base has non-virtual destructor
+	applypatch hotspot &quot;$PATCH_DIR/jdk8u-hotspot-8244878.patch&quot;
+	
+	applypatch hotspot &quot;$PATCH_DIR/jdk8u-hotspot-mac.patch&quot;
+
+	# libosxapp.dylib fails to build on Mac OS 10.9 with clang
+	applypatch jdk     &quot;$PATCH_DIR/jdk8u-jdk-8043646.patch&quot;
+
+	applypatch jdk     &quot;$PATCH_DIR/jdk8u-jdk-minversion.patch&quot;
+}
+patchjdkbuild
+</code></pre>
+<p>然后执行这个脚本：</p>
+<pre><code class="language-bash">bash patsh.sh
+</code></pre>
+<h4 id="32-配置">3.2 配置</h4>
+<pre><code class="language-bash">sh ./configure MAKE=/usr/bin/make --with-toolchain-type=clang --with-debug-level=slowdebug --disable-zip-debug-info --with-target-bits=64 --with-boot-jdk=/Users/jiajiawang/Software/jdk/jdk1.7.0_80.jdk/Contents/Home/ --with-freetype-include=/usr/local/Cellar/freetype/2.10.2/include/freetype2 --with-freetype-lib=/usr/local/Cellar/freetype/2.10.2/lib/
+</code></pre>
+<p><code>MAKE=/usr/bin/make</code>是可选的，如果下文使用<code>Bear</code>来生成<code>Compilation Database</code>，可以不加这个参数。</p>
+<p><code>configure</code>部分参数说明如下：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--with-toolchain-type</td>
+<td>使用的工具链类型，取值有<code>gcc</code>，<code>clang</code>等，可以使用<code>--help</code>来查看所有可选值</td>
+</tr>
+<tr>
+<td>--with-debug-level</td>
+<td>调试信息的级别，可选值有<code>release</code>,<code>fastdebug</code>,<code>slowdebug</code></td>
+</tr>
+<tr>
+<td>--disable-zip-debug-info</td>
+<td>禁止压缩调试信息，设置为true可以更好地调试</td>
+</tr>
+<tr>
+<td>--with-target-bits</td>
+<td>选择32位或者64位，根据操作系统选择</td>
+</tr>
+<tr>
+<td>--with-boot-jdk</td>
+<td><code>bootjdk</code>位置</td>
+</tr>
+<tr>
+<td>--with-freetype-include <br>--with-freetype-lib</td>
+<td>指定<code>freetype</code>依赖位置，在执行<code>configure</code>时如果找不到<code>freetype</code>，需要指定这两个参数</td>
+</tr>
+</tbody>
+</table>
+<p>参数的更多说明及更多参数请参考：<a href="http://hg.openjdk.java.net/jdk8u/jdk8u/raw-file/tip/README-builds.html#configure">OpenJDK 8 Build README - Configure</a></p>
+<h4 id="33-构建">3.3 构建</h4>
+<p>同样我们仍然可以使用<code>bear</code>或者<code>compiledb</code>来生成<code>Compilation Database</code>，但是使用<code>bear</code>过程中遇到一些问题比较繁琐，推荐使用<code>compiledb</code>。</p>
+<h5 id="使用compiledb">使用compiledb</h5>
+<pre><code class="language-bash"># 1. 请先确保安装了Python及pip
+方法请自行搜索
+# 2. 安装compiledb工具
+pip install compiledb
+# 3. 构建，并使用compiledb工具生成Compilation Database
+compiledb make all COMPILER_WARNINGS_FATAL=false
+# 可以使用 LOG=debug 选项来输出更为详细的信息
+# compiledb make all LOG=debug COMPILER_WARNINGS_FATAL=false
+</code></pre>
+<p>使用<code>compiledb</code>可能会存在的问题是生成的<code>compile_commands.json</code>文件中所有项的<code>directory</code>项都是项目的根目录，导致一个头文件无法找到，导入<code>CLion</code>时报错，代码定义及跳转无效。原因是在<code>MacOS</code>平台，编译构建使用的可能是<code>gmake</code>，而<code>compiledb</code>对<code>gmake</code>切换路径的操作无法捕捉到，导致路径全部都是根目录。解决办法就是显示指定使用<code>make</code>而不是<code>gmake</code>，指定方法就是上一小节中在<code>Configure</code>时指定的<code>MAKE=/usr/bin/make</code>参数。</p>
+<h5 id="使用bear">使用bear</h5>
+<p>上面我们使用<code>compiledb</code>工具来生成<code>Compilation Database</code>，同样也可以使用<code>bear</code>工具来生成：</p>
+<pre><code class="language-bash"># 1. 首先需要关闭SIP，否则生成的 Compilation Database 可能会是空的
+关闭SIP的方法请自行搜索
+# 2. 安装bear
+brew install bear
+# 3. 构建，并使用bear工具生成Compilation Database
+bear make all COMPILER_WARNINGS_FATAL=false
+# 可以使用 LOG=debug 选项来输出更为详细的信息
+# compiledb make all LOG=debug COMPILER_WARNINGS_FATAL=false
+</code></pre>
+<p>如果遇到执行命令遇到报如下错误：</p>
+<pre><code>/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1/stdio.h:107:15: fatal error: 'stdio.h' file not found&quot;
+</code></pre>
+<p>可以尝试执行如下命令：</p>
+<pre><code class="language-bash">sudo mount -uw /
+sudo cp -R /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include /usr
+</code></pre>
+<p>更多<code>make</code>的<code>target</code>请参考<a href="http://hg.openjdk.java.net/jdk8u/jdk8u/raw-file/tip/README-builds.html#make">OpenJDK 8 Build README - Make</a></p>
+<p>如果没有报错，完成之后应该可以在<code>./build/macosx-x86_64-normal-server-slowdebug/jdk</code>目录下找到编译之后的<code>JDK</code>，验证一下是否成功</p>
+<pre><code class="language-bash">~: cd build/macosx-x86_64-normal-server-slowdebug/jdk/bin/
+~: ./java -version
+openjdk version &quot;1.8.0-internal-debug&quot;
+......
+</code></pre>
+<p>同时项目根目录下应该同时有一个<code>compile_commands.json</code>文件，并且不为空。</p>
+<h3 id="4-导入clion并调试-3">4. 导入CLion并调试</h3>
+<p>需要注意在创建<code>Custom Build Targets</code>时，新建的用于<code>Build</code>的<code>External Tool</code>中<code>make</code>的参数中也要加上<code>COMPILER_WARNINGS_FATAL=false</code></p>
+<h2 id="openjdk-11-2">OpenJDK 11</h2>
+<h3 id="1-下载openjdk11源代码-2">1. 下载OpenJDK11源代码</h3>
+<pre><code class="language-bash">git clone git@github.com:AdoptOpenJDK/openjdk-jdk11u.git
+</code></pre>
+<h3 id="2-安装工具链及依赖-4">2. 安装工具链及依赖</h3>
+<ol>
+<li>
+<p>首先需要下载安装<code>jdk10</code>作为<code>bootjdk</code>，方法见文章开头。</p>
+</li>
+<li>
+<p>安装<code>HomeBrew</code>。<code>Homebrew</code>是一款<code>MacOS</code>系统上的软件包管理系统。</p>
+<pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)&quot;
+</code></pre>
+</li>
+<li>
+<p>安装<code>Xcode</code>。可以直接在<code>App Store</code>搜索<code>Xcode</code>安装，也可以在<a href="https://developer.apple.com/download/more/">https://developer.apple.com/download/more/</a>下载离线安装包安装。可以使用<code>xcodebuild</code>命令验证是否安装成功，正确输出版本号则表明正确安装。</p>
+<pre><code class="language-bash">xcodebuild -version
+</code></pre>
+<p>如果是离线安装的话，可能会报<code>xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance</code>错误，这是因为<code>xcodebuild</code>找不到新安装的<code>Xcode</code>，只需要执行下面这个命令即可。</p>
+<pre><code>sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer/
+</code></pre>
+</li>
+<li>
+<p>安装编译工具</p>
+<pre><code class="language-bash">brew install autoconf
+brew install make
+</code></pre>
+</li>
+<li>
+<p>安装所需依赖</p>
+<pre><code class="language-bash"># 安装freetype
+brew install freetype
+</code></pre>
+</li>
+</ol>
+<h3 id="3-配置及编译">3. 配置及编译</h3>
+<pre><code class="language-bash"># 配置
+sh ./configure --with-debug-level=slowdebug --with-native-debug-symbols=internal --with-target-bits=64 --with-boot-jdk=/Users/jiajiawang/Software/jdk/jdk-10.0.2+13/Contents/Home
+</code></pre>
+<p><code>configure</code>参数说明：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--with-debug-level</td>
+<td>调试信息的级别，可选值有<code>release</code>,<code>fastdebug</code>,<code>slowdebug</code></td>
+</tr>
+<tr>
+<td>--with-native-debug-symbols</td>
+<td>指定如何构建<code>debug symbol</code>，可选值有<code>none</code>,<code>internal</code>, <code>external</code>, <code>zipped</code>，设置为<code>internal</code>可以更好地调试</td>
+</tr>
+<tr>
+<td>--with-target-bits</td>
+<td>选择32位或者64位，根据操作系统选择</td>
+</tr>
+<tr>
+<td>--with-boot-jdk</td>
+<td><code>bootjdk</code>位置</td>
+</tr>
+<tr>
+<td>--with-freetype-include <br>--with-freetype-lib</td>
+<td>指定<code>freetype</code>依赖位置，在执行<code>configure</code>时如果找不到<code>freetype</code>，需要指定这两个参数</td>
+</tr>
+</tbody>
+</table>
+<p>参数的更多说明及更多参数请参考：<a href="http://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html#running-configure">OpenJDK 11 Build README - Configure</a></p>
+<pre><code class="language-bash"># 生成Compilation Database
+make compile-commands
+# 构建
+make all
+</code></pre>
+<p>完成之后，应该在<code>/build/linux-x86_64-normal-server-slowdebug/</code>目录下会有<code>compile_commands.json</code>文件。</p>
+<p>更多<code>make</code>的<code>target</code>请参考<a href="http://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html#running-make">OpenJDK 11 Build README - Make</a></p>
+<p>完成之后应该可以在<code>./build/macosx-x86_64-normal-server-slowdebug/jdk</code>目录下找到编译之后的jdk，验证一下是否成功</p>
+<pre><code class="language-bash">~: cd build/macosx-x86_64-normal-server-slowdebug/jdk/bin/
+~: ./java -version
+openjdk version &quot;11.0.8-internal&quot; 2020-07-14
+......
+</code></pre>
+<p>同时在<code>./build/macosx-x86_64-normal-server-slowdebug/</code>目录下会有<code>compile_commands.json</code>文件，并且不为空。</p>
+<h3 id="4-导入clion并调试-4">4. 导入CLion并调试</h3>
+<p>大致步骤与前文介绍相同。<br>
+需要注意的是在选择<code>/build/macosx-x86_64-normal-server-slowdebug/</code>目录下的<code>compile_commands.json</code>文件导入项目之后需要更改项目的根目录为<code>源码的根目录</code>(这里也就是<code>openjdk-11u</code>目录)。点击菜单<code>Tools | Compilation Database | Change Project Root</code>，将项目的根目录设置为<code>源码根目录</code>(<code>openjdk-11u</code>)，等待重新索引完成。<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200615091032.gif" alt="" loading="lazy"></p>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="https://openjdk.java.net/">OpenJDK</a></li>
+<li><a href="https://hg.openjdk.java.net/jdk8u/jdk8u/raw-file/tip/README-builds.html">OpenJDK 8 Build README</a></li>
+<li><a href="https://hg.openjdk.java.net/jdk/jdk11/raw-file/tip/doc/building.html">OpenJDK 11 Build README</a></li>
+<li><a href="https://github.com/rizsotto/Bear">rizsotto/Bear: Bear is a tool that generates a compilation database for clang tooling</a></li>
+<li><a href="https://github.com/nickdiego/compiledb">nickdiego/compiledb: Tool for generating Clang's JSON Compilation Database files for make-based build systems.</a></li>
+<li><a href="https://www.jetbrains.com/help/clion/managing-makefile-projects.html">Managing Makefile Projects</a></li>
+<li><a href="https://blog.jetbrains.com/clion/2020/02/dealing-with-makefiles/">Dealing with Makefile Projects in CLion: Status Update</a></li>
+<li><a href="https://blog.jetbrains.com/clion/2020/03/openjdk-with-clion/">Tips &amp; Tricks: Develop OpenJDK in CLion with Pleasure</a></li>
+<li><a href="https://dzone.com/articles/debugging-openjdk">Debugging OpenJDK - DZone DevOps</a></li>
+<li><a href="https://sarcasm.github.io/notes/dev/compilation-database.html">Compilation database — Sarcasm notebook</a></li>
+<li><a href="https://developer.apple.com/download/more/">More Software Downloads - Apple Developer</a></li>
+<li><a href="https://github.com/stooke/jdk8u-xcode10">stooke/jdk8u-xcode10: How to compile JDK 8u with Xcode 9, 10 or 11 on macOS.</a></li>
+</ol>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://jiawanggjia.github.io/tag/Ein8Q-rH6/" class="tag">
+                    JAVA
+                  </a>
+                
+              </div>
+            
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

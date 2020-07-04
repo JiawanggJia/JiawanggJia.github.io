@@ -770,3 +770,7 @@ a {
         color: #d0ebff;
       }
     
+      .post-detail {
+    max-width:100%;
+}
+    

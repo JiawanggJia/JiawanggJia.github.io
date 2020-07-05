@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://jiawanggjia.github.io</id>
     <title>Keaper&apos;s Blog</title>
-    <updated>2020-07-05T11:04:39.427Z</updated>
+    <updated>2020-07-05T11:21:36.070Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://jiawanggjia.github.io"/>
     <link rel="self" href="https://jiawanggjia.github.io/atom.xml"/>
@@ -11,7 +11,7 @@
     <icon>https://jiawanggjia.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, Keaper&apos;s Blog</rights>
     <entry>
-        <title type="html"><![CDATA[使用CLion调试Redis]]></title>
+        <title type="html"><![CDATA[使用CLion调试Redis(Ubuntu 16.04 + MacOS 10.15)]]></title>
         <id>https://jiawanggjia.github.io/post/bs-IxGChu/</id>
         <link href="https://jiawanggjia.github.io/post/bs-IxGChu/">
         </link>
@@ -155,7 +155,7 @@ Program arguments: 这里我们选择&quot;$ProjectFileDir$/redis.conf&quot;作�
 ]]></content>
     </entry>
     <entry>
-        <title type="html"><![CDATA[OpenJDK 编译指南]]></title>
+        <title type="html"><![CDATA[OpenJDK 编译指南(Ubuntu 16.04 + MacOS 10.15)]]></title>
         <id>https://jiawanggjia.github.io/post/openjdk-bian-yi-zhi-nan/</id>
         <link href="https://jiawanggjia.github.io/post/openjdk-bian-yi-zhi-nan/">
         </link>

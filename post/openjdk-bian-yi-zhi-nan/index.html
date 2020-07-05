@@ -8,7 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1593883027362">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1593947044458">
 <link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
 
 
@@ -18,7 +18,9 @@
 
 
 
-    <meta name="description" content="本篇文章主要介绍在MacOS系统和Ubuntu系统上如何编译OpenJDK项目代码，并使用IDE工具JetBrains CLion（下文简称CLion）来运行/调试OpenJDK。文中仅包含两种操作系统的特定版本（MacOS 10.15和U..." />
+    <meta name="description" content="本篇文章主要介绍在MacOS系统和Ubuntu系统上如何编译OpenJDK项目代码，并使用IDE工具JetBrains CLion（下文简称CLion）来运行/调试OpenJDK。
+
+文中仅包含两种操作系统的特定版本（MacOS 10.15..." />
     <meta name="keywords" content="JAVA" />
   </head>
   <body>
@@ -28,7 +30,7 @@
   <div class="top-container" data-aos="fade-right">
     <div class="top-header-container">
       <a class="site-title-container" href="https://jiawanggjia.github.io">
-        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1593883027362" class="site-logo">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1593947044458" class="site-logo">
         <h1 class="site-title">Keaper&#39;s Blog</h1>
       </a>
       <div class="menu-btn" @click="menuVisible = !menuVisible">
@@ -98,7 +100,9 @@
             <div class="post-date">2020-06-28</div>
             
             <div class="post-content" v-pre>
-              <p>本篇文章主要介绍在<code>MacOS</code>系统和<code>Ubuntu</code>系统上如何编译<code>OpenJDK</code>项目代码，并使用<code>IDE</code>工具<code>JetBrains CLion</code>（下文简称<code>CLion</code>）来运行/调试<code>OpenJDK</code>。文中仅包含两种操作系统的特定版本（<code>MacOS 10.15</code>和<code>Ubuntu 16.04</code>）下的方法，不同版本下可能会略有差异。希望对读者有一定的参考价值。</p>
+              <p>本篇文章主要介绍在<code>MacOS</code>系统和<code>Ubuntu</code>系统上如何编译<code>OpenJDK</code>项目代码，并使用<code>IDE</code>工具<code>JetBrains CLion</code>（下文简称<code>CLion</code>）来运行/调试<code>OpenJDK</code>。</p>
+<!-- more -->
+<p>文中仅包含两种操作系统的特定版本（<code>MacOS 10.15</code>和<code>Ubuntu 16.04</code>）下的方法，不同版本下可能会略有差异。希望对读者有一定的参考价值。</p>
 <p>总体来说，编译<code>OpenJDK11</code>在两种系统上都没有太大的阻碍，难度低于<code>OpenJDK8</code>。编译<code>OpenJDK8</code>在<code>Ubuntu</code>上比较简单，在<code>MacOS</code>上比较繁琐复杂。</p>
 <h1 id="编译调试openjdk的基本步骤">编译调试OpenJDK的基本步骤</h1>
 <p>完成编译并实现调试<code>OpenJDK</code>流程可以分为以下几个步骤：</p>

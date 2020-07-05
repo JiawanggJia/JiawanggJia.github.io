@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>使用CLion调试Redis | Keaper&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1593947044458">
+<link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="本文主要介绍如何编译Redis项目并在JetBrains CLion（以下简称CLion）中运行/调试。
+
+0. 开始之前
+JSON Compilation Database
+CLion默认支持CMake构建的项目，但Redis项目是基于M..." />
+    <meta name="keywords" content="Redis" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://jiawanggjia.github.io">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1593947044458" class="site-logo">
+        <h1 class="site-title">Keaper&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/JiawanggJia/" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      帝都码农一枚
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://jiawanggjia.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">使用CLion调试Redis</h2>
+            <div class="post-date">2020-07-05</div>
+            
+            <div class="post-content" v-pre>
+              <p>本文主要介绍如何编译<code>Redis</code>项目并在<code>JetBrains CLion</code>（以下简称<code>CLion</code>）中运行/调试。</p>
+<!-- more -->
+<h1 id="0-开始之前">0. 开始之前</h1>
+<h2 id="json-compilation-database">JSON Compilation Database</h2>
+<p><code>CLion</code>默认支持<code>CMake</code>构建的项目，但<code>Redis</code>项目是基于<code>Make</code>构建的。对于使用<code>Make</code>构建的项目，<code>CLion</code>仍然可以通过<code>Compilation Database</code>来导入项目，而不用将其修改为<code>CMake</code>项目。同时也能通过<code>Compilation Database</code>实现代码的分析、跳转等功能，这对于我们进行代码调试很有帮助。</p>
+<p>有关于<code>Compilation Database</code>的介绍可以参考这几篇文章：</p>
+<ul>
+<li><code>Clang</code>官方的<code>Compilation Database</code>介绍页面：<a href="https://clang.llvm.org/docs/JSONCompilationDatabase.html">JSON Compilation Database Format Specification — Clang 11 documentation</a></li>
+<li>这篇文章介绍了在不同场景下生成<code>Compilation database</code>的各种工具：<a href="https://sarcasm.github.io/notes/dev/compilation-database.html">Compilation database — Sarcasm notebook</a></li>
+<li><code>CLion</code>的帮助页面简要介绍了<code>Compilation Database</code>，以及在<code>CLion</code>的使用：<a href="https://www.jetbrains.com/help/clion/compilation-database.html">Compilation Database - Help | CLion</a></li>
+</ul>
+<p>对于基于<code>Make</code>构建的<code>Redis</code>项目来说，有一些工具可以生成<code>Compilation Database</code>，比如下面几个：</p>
+<ul>
+<li><a href="https://github.com/rizsotto/Bear">https://github.com/rizsotto/Bear</a></li>
+<li><a href="https://github.com/rizsotto/scan-build">https://github.com/rizsotto/scan-build</a></li>
+<li><a href="https://github.com/nickdiego/compiledb">https://github.com/nickdiego/compiledb</a></li>
+</ul>
+<p>通常默认生成的<code>Compilation Database</code>是一个<code>compile_commands.json</code>文件。</p>
+<h1 id="1-下载redis源码">1. 下载Redis源码</h1>
+<pre><code class="language-bash">git clone git@github.com:redis-io/redis.git
+cd redis
+# 可以切换至指定版本对应分支
+git checkout 5.0
+</code></pre>
+<h1 id="2-编译构建redis">2. 编译构建Redis</h1>
+<p><code>Redis</code>基于<code>Make</code>构建，执行<code>make</code>命令即可完成构建。<code>Redis</code> 默认使用<code>-O2</code>级别优化，可以使用<code>make noopt</code>来编译以关闭优化，获得更多的调试信息。</p>
+<hr>
+<p>我们需要使用工具来生成<code>Compilation Database</code>，以便于导入<code>CLion</code>。在不同系统上各个工具安装情况可能略有不同，下面分别介绍<code>Ubuntu 16.04</code>和<code>MacOS 10.15</code>上编译<code>Redis</code>并生成<code>Compilation Database</code>的方法。</p>
+<h2 id="ubuntu-1604">Ubuntu 16.04</h2>
+<h3 id="使用bear工具">使用Bear工具</h3>
+<pre><code class="language-bash"># 下载Bear工具
+sudo apt-get install bear
+# 编译构建，并使用Bear工具生成 Compilation Database
+bear make noopt
+</code></pre>
+<h3 id="使用compiledb工具">使用compiledb工具</h3>
+<pre><code class="language-bash"># 安装pip
+sudo apt-get install python-pip
+# pip安装 compiledb
+pip install compiledb
+# 编译构建，并使用compiledb工具生成 Compilation Database
+compiledb make noopt
+</code></pre>
+<h2 id="macos-1015">MacOS 10.15</h2>
+<h3 id="使用bear工具-2">使用Bear工具</h3>
+<p>在<code>MacOS</code>上使用Bear工具需要关闭SIP，关闭方法是进入恢复模式执行<code>csrutil disable</code>命令，然后重启，详细操作方法请自行搜索。</p>
+<p>我们需要用到<code>Homebrew</code>来安装<code>Bear</code>，如果没有安装<code>Homebrew</code>需要先安装<code>Homebrew</code>，安装方法：</p>
+<pre><code class="language-bash">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)&quot;
+</code></pre>
+<p>开始编译<code>Redis</code>：</p>
+<pre><code class="language-bash"># 下载Bear工具
+brew install bear
+# 编译构建，并使用Bear工具生成 Compilation Database
+bear make noopt
+</code></pre>
+<p>如果遇到<code>adlist.c:32:10: fatal error: 'stdlib.h' file not found</code>报错，可以先执行以下命令后重试：</p>
+<pre><code class="language-bash">sudo mount -uw /
+sudo cp -R /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include /usr
+</code></pre>
+<h3 id="使用compiledb工具-2">使用compiledb工具</h3>
+<p>我们需要使用<code>pip</code>来安装<code>compiledb</code>，如果没有安装<code>pip</code>需要先安装<code>pip</code>，安装方法：</p>
+<pre><code class="language-bash">curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+# 安装pip之后可能还需要设置环境变量
+</code></pre>
+<p>开始编译<code>Redis</code>：</p>
+<pre><code class="language-bash"># pip安装 compiledb
+pip install compiledb
+# 编译构建，并使用compiledb工具生成 Compilation Database
+compiledb make noopt
+</code></pre>
+<hr>
+<p>编译完成之后可以检验以下是否成功：</p>
+<pre><code>$ ./src/redis-server --version
+Redis server v=5.0.8 sha=1f7d08b7:1 malloc=libc bits=64 build=3530fd9b48a55c7f
+</code></pre>
+<p>同时根目录下应该会有一个不为空的<code>compile_commands.json</code>文件。</p>
+<h2 id="导入clion并调试">导入CLion并调试</h2>
+<p>对于如何在<code>CLion</code>中管理基于<code>Make</code>构建的项目，<code>CLion</code>的官方帮助文档中有详细的介绍：<br>
+<a href="https://www.jetbrains.com/help/clion/managing-makefile-projects.html">Managing Makefile Projects</a>。参考上述文档，本小节简要介绍了如何在<code>CLion</code>中导入<code>Redis</code>项目并运行/调试的方法。</p>
+<ol>
+<li>
+<p>下载安装<code>CLion</code>，并安装<code>Makefile Support</code>插件。建议使用最新版本，较老的版本是不支持<code>Make</code>构建的项目的。</p>
+</li>
+<li>
+<p>导入项目。打开<code>CLion</code>，选择<code>Open Or Import</code>，选择项目目录中的<code>compile_commands.json</code>文件，弹出框选择<code>Open as Project</code>，等待文件索引完成。<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200705183609.gif" alt="" loading="lazy"></p>
+</li>
+<li>
+<p>创建自定义<code>Build Target</code>。点击<code>File</code>菜单栏，<code>Settings | Build, Execution, Deployment | Custom Build Targets</code>，点击<code>+</code>新建一个<code>Target</code>。</p>
+<ul>
+<li><code>Name</code>：<code>Target</code>的名字，之后在创建<code>Run/Debug</code>配置的时候会看到这个名字</li>
+<li>点击<code>Build</code>或者<code>Clean</code>右边的三点，弹出框中点击<code>+</code>新建两个<code>External Tool</code>配置如下：<br>
+第一个配置如下，用来指定构建指令，Program 和 Arguments 共同构成了所要执行的命令 &quot;make noopt&quot;<pre><code class="language-bash">Name: make
+Program: make
+Arguments: noopt
+Working directory: $ProjectFileDir$
+</code></pre>
+第二个配置如下，用来清理构建输出，Program 和 Arguments 共同构成了所要执行的命令 &quot;make clean&quot;<pre><code class="language-bash">Name: make clean
+Program: make
+Arguments: clean
+Working directory: $ProjectFileDir$
+</code></pre>
+</li>
+<li><code>ToolChain</code>选择<code>Default</code>；<code>Build</code>选择<code>make</code>（上面创建的第一个<code>External Tool</code>）；<code>Clean</code>选择<code>make clean</code>（上面创建的第二个<code>External Tool</code>）<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200705183311.gif" alt="" loading="lazy"></li>
+</ul>
+</li>
+<li>
+<p>创建自定义的<code>Run/Debug configuration</code>。点击<code>Run</code>菜单栏,<code>Edit Configurations</code>， 点击<code>+</code>，选择<code>Custom Build Application</code>，配置如下：</p>
+<pre><code class="language-bash"># Name：Configure 的名称
+Name: redis
+# Target：选择上一步创建的 “Custom Build Target”
+Target: redis
+# Executable：程序执行入口，也就是需要调试的程序
+Executable: 这里我们调试Redis Server，选择`{source_root}/src/redis-server`。
+# Program arguments: 与 “Executable” 配合使用，指定其参数
+Program arguments: 这里我们选择&quot;$ProjectFileDir$/redis.conf&quot;作为配置文件启动Redis服务器
+</code></pre>
+<p><code>Executable</code>和<code>Program arguments</code>可以根据需要调试的信息自行设置。</p>
+<p>如果不想每次运行/调试前都执行<code>Build</code>操作（在这里就是<code>Make</code>构建过程），可以在编辑页下方<code>Before launch</code>框中删除<code>Build</code>条目。<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200705183322.gif" alt="" loading="lazy"></p>
+</li>
+<li>
+<p>点击<code>Run</code>/<code>Debug</code>开始运行/调试。</p>
+</li>
+</ol>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="https://redis.io/topics/debugging">Redis debugging guide</a></li>
+<li><a href="https://github.com/nickdiego/compiledb">nickdiego/compiledb: Tool for generating Clang's JSON Compilation Database files for make-based build systems.</a></li>
+<li><a href="https://www.jetbrains.com/help/clion/managing-makefile-projects.html">Managing Makefile Projects</a></li>
+<li><a href="https://blog.jetbrains.com/clion/2020/02/dealing-with-makefiles/">Dealing with Makefile Projects in CLion: Status Update</a></li>
+</ol>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://jiawanggjia.github.io/tag/kAAcWcDJv/" class="tag">
+                    Redis
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://jiawanggjia.github.io/post/openjdk-bian-yi-zhi-nan/">
+                  <h3 class="post-title">
+                    OpenJDK 编译指南
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://jiawanggjia.github.io</id>
     <title>Keaper&apos;s Blog</title>
-    <updated>2020-07-05T11:21:36.070Z</updated>
+    <updated>2020-07-29T16:56:22.308Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://jiawanggjia.github.io"/>
     <link rel="self" href="https://jiawanggjia.github.io/atom.xml"/>
@@ -10,6 +10,178 @@
     <logo>https://jiawanggjia.github.io/images/avatar.png</logo>
     <icon>https://jiawanggjia.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, Keaper&apos;s Blog</rights>
+    <entry>
+        <title type="html"><![CDATA[MySQL 5.7 编译调试指南(Ubuntu 16.04 + MacOS 10.15)]]></title>
+        <id>https://jiawanggjia.github.io/post/mysql-57-bian-yi-diao-shi-zhi-nan-ubuntu-1604-macos-1015/</id>
+        <link href="https://jiawanggjia.github.io/post/mysql-57-bian-yi-diao-shi-zhi-nan-ubuntu-1604-macos-1015/">
+        </link>
+        <updated>2020-07-29T16:44:37.000Z</updated>
+        <summary type="html"><![CDATA[<p>本文主要介绍在<code>MacOS 10.15</code>和<code>Ubuntu 16.04</code>系统下编译构建<code>MySQL 5.7.30</code>并使用<code>JetBrains CLion</code>(以下简称<code>CLion</code>)进行运行调试的方法。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>本文主要介绍在<code>MacOS 10.15</code>和<code>Ubuntu 16.04</code>系统下编译构建<code>MySQL 5.7.30</code>并使用<code>JetBrains CLion</code>(以下简称<code>CLion</code>)进行运行调试的方法。</p>
+<!-- more -->
+<h1 id="下载源码">下载源码</h1>
+<p>可以从两种方式下载<code>MySQL</code>源代码：</p>
+<h2 id="从官方代码库下载最新源代码">从官方代码库下载最新源代码</h2>
+<pre><code class="language-bash"># clone过程可能耗时比较长
+git clone https://github.com/mysql/mysql-server.git
+# 可以切换至指定版本对应分支
+git checkout 5.7
+</code></pre>
+<h2 id="下载源代码分发包">下载源代码分发包</h2>
+<p><code>MySQL</code>提供了各个版本的源码分发包供下载。下载地址：<a href="https://downloads.mysql.com/archives/community/">MySQL Product Archives</a>，选择指定版本下载解压即可。</p>
+<h1 id="安装依赖">安装依赖</h1>
+<p>对于各个依赖或者工具，安装前可以先验证一下是否已经安装，一些工具系统已经预装。</p>
+<h2 id="1-构建工具-cmake-make">1. 构建工具 CMake + make</h2>
+<p>在<code>Ubuntu</code>上：</p>
+<pre><code class="language-bash">sudo apt install cmake make
+</code></pre>
+<p>在<code>MacOS</code>上：</p>
+<pre><code class="language-bash">brew install cmake make
+</code></pre>
+<p><a href="https://dev.mysql.com/doc/refman/5.7/en/source-installation-prerequisites.html">MySQL 5.7 Reference Manual</a>建议的<code>make</code>为<code>GNU make 3.75</code>或者更高版本。</p>
+<h2 id="2-编译工具-gccclang">2. 编译工具 GCC/Clang</h2>
+<p>在<code>Ubuntu</code>上，<code>MySQL</code>可以使用<code>GCC</code>或者<code>Clang</code>来编译，这里我们使用<code>apt</code>来安装<code>GCC</code>：</p>
+<pre><code class="language-bash">sudo apt install gcc
+</code></pre>
+<p>在<code>MacOS</code>上，<code>MySQL</code>会使用<code>Clang</code>编译器来编译，一般<code>MacOS</code>系统已经安装好了<code>Clang</code>，如果没有的的话可以通过安装<code>Xcode</code>来方便地安装<code>Clang</code>。可以在<code>App Store</code>中下载完整<code>Xcode</code>，或者使用如下命令来安装<code>Xcode command line tools</code>：</p>
+<pre><code class="language-bash">xcode-select --install
+</code></pre>
+<p>根据<a href="https://dev.mysql.com/doc/refman/5.7/en/source-configuration-options.html#option_cmake_force_unsupported_compiler">MySQL 5.7 Reference Manual</a>，对于<code>MySQL 5.7</code>，支持的<code>GCC</code>最低版本是<code>4.4</code>，支持的<code>Clang</code>最低版本是<code>3.3</code>。</p>
+<h2 id="3-openssl">3. OpenSSL</h2>
+<p>在<code>Ubuntu</code>下：</p>
+<pre><code class="language-bash">sudo apt install openssl libssl-dev
+</code></pre>
+<p>在<code>MacOS</code>下：</p>
+<pre><code class="language-bash">brew install openssl
+</code></pre>
+<p>根据<a href="https://dev.mysql.com/doc/refman/5.7/en/source-ssl-library-configuration.html">MySQL 5.7 Reference Manual</a>，对于<code>MySQL 5.7</code>，支持的最小<code>OpenSSL</code>版本是<code>1.0.1</code>。</p>
+<h2 id="4-boost">4. Boost</h2>
+<p>根据<a href="https://dev.mysql.com/doc/refman/5.7/en/source-installation-prerequisites.html">MySQL 5.7 Reference Manual</a>，对于<code>MySQL 5.7</code>，必须要使用<code>1.59.0</code>版本。在<a href="https://www.boost.org/users/history/">Boost Version History</a>下载<code>Boost 1.59.0</code>并解压。</p>
+<blockquote>
+<p>因为<code>1.59.0</code>是比较老的版本，所以并不推荐直接使用包管理器在全局安装一个旧版本的<code>Boost</code>，所以我们这里采用下载后在构建时指定其路径的方法。</p>
+</blockquote>
+<h2 id="5-ncurses">5. ncurses</h2>
+<p>在<code>Ubuntu</code>下：</p>
+<pre><code class="language-bash">sudo apt-get install libncurses5-dev
+</code></pre>
+<p>在<code>MacOS</code>下：</p>
+<pre><code class="language-bash">brew install ncurses
+</code></pre>
+<h2 id="6-bison">6. Bison</h2>
+<p>在<code>Ubuntu</code>下：</p>
+<pre><code class="language-bash">sudo apt-get install bison
+</code></pre>
+<p>在<code>MacOS</code>下：</p>
+<pre><code class="language-bash">brew install bison
+</code></pre>
+<p>根据<a href="https://dev.mysql.com/doc/refman/5.7/en/source-installation-prerequisites.html">MySQL 5.7 Reference Manual</a>，对于<code>MySQL 5.7</code>，支持的<code>bison</code>最低版本是<code>2.1</code>，</p>
+<h1 id="编译构建">编译构建</h1>
+<p>为了不影响机器上原本已经安装的<code>MySQL</code>，在配置构建过程中，我们自定义了一些配置避免与机器上另外的<code>MySQL</code>实例冲突。</p>
+<pre><code class="language-bash"># 进入源码目录
+cd mysql-server
+# 创建构建文件的目录及数据目录、临时文件目录
+mkdir -p bld/data bld/tmp
+# 配置，&quot;/home/jiajiawang/workspace/mysql-server/&quot;为源码目录的绝对路径
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/jiajiawang/workspace/mysql-server/bld -DMYSQL_DATADIR=/home/jiajiawang/workspace/mysql-server/bld/data  -DMYSQL_UNIX_ADDR=/home/jiajiawang/workspace/mysql-server/bld/data/mysql.sock -DTMPDIR=/home/jiajiawang/workspace/mysql-server/bld/tmp/ -DMYSQL_TCP_PORT=3336 -DWITH_BOOST=/home/jiajiawang/software/boost_1_59_0
+
+# 构建
+make
+# 安装MySQL
+make install
+</code></pre>
+<p>上面配置的目录及文件位置最好都配置成<strong>绝对路径</strong>。</p>
+<p><code>CMake</code>选项说明：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMAKE_BUILD_TYPE</td>
+<td>生成的构建类型，可选值有：<code>RelWithDebInfo</code>，<code>Debug</code> ，使用<code>Debug</code>可以禁用优化，更有助于调试</td>
+<td><code>RelWithDebInfo</code></td>
+</tr>
+<tr>
+<td>CMAKE_INSTALL_PREFIX</td>
+<td>指定<code>MySQL</code>安装路径</td>
+<td><code>/usr/local/mysql</code></td>
+</tr>
+<tr>
+<td>MYSQL_DATADIR</td>
+<td>指定<code>MySQL</code>数据目录</td>
+<td></td>
+</tr>
+<tr>
+<td>MYSQL_UNIX_ADDR</td>
+<td>指定<code>Unix socket</code>文件目录</td>
+<td><code>/tmp/mysql.sock</code></td>
+</tr>
+<tr>
+<td>TMPDIR</td>
+<td>指定临时文件目录</td>
+<td></td>
+</tr>
+<tr>
+<td>MYSQL_TCP_PORT</td>
+<td><code>MySQL</code>启动<code>TCP</code>端口号</td>
+<td><code>3306</code></td>
+</tr>
+<tr>
+<td>WITH_BOOST</td>
+<td>指定<code>Boost</code>依赖的路径</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>更多选项说明请参考：<a href="https://dev.mysql.com/doc/refman/5.7/en/source-configuration-options.html">MySQL 5.7 Reference Manual</a></p>
+<h1 id="配置并启动mysql">配置并启动MySQL</h1>
+<h2 id="1-数据库初始化">1. 数据库初始化</h2>
+<pre><code class="language-bash">cd bld
+</code></pre>
+<p>使用如下命令可以用来初始化数据库。两个参数的区别是<code>--initialize</code>会为<code>root@localhost</code>用户生成一个随机密码，而<code>--initialize-insecure</code>会设置<code>root@localhost</code>用户密码为空：</p>
+<pre><code class="language-bash">bin/mysqld --initialize
+# 或者
+bin/mysqld --initialize-insecure
+</code></pre>
+<p>创建加密连接需要的文件：</p>
+<pre><code class="language-bash">bin/mysql_ssl_rsa_setup
+</code></pre>
+<h2 id="2-启动-mysql-server">2. 启动 MySQL Server</h2>
+<p>启动<code>MySQL Server</code>：</p>
+<pre><code class="language-bash">bin/mysqld
+</code></pre>
+<p>关于其他启动方式，参考：<a href="https://dev.mysql.com/doc/refman/5.7/en/programs-server.html">MySQL 5.7 Reference Manual</a></p>
+<h2 id="3-使用-mysql-client-连接-server">3. 使用 MySQL Client 连接 Server</h2>
+<p>使用<code>MySQL Client</code>连接<code>Server</code>：</p>
+<pre><code class="language-bash"># 如果没有生成密码的话可以不指定-p
+bin/mysql -uroot -p
+</code></pre>
+<p>使用初始化时生成的随机密码登录后需要修改密码才可以进行其他操作：</p>
+<pre><code class="language-bash">alter user 'root'@'localhost' identified by 'root';
+</code></pre>
+<h2 id="4-关闭mysql-server">4. 关闭MySQL Server</h2>
+<p>使用<code>ps</code>命令找到<code>mysqld</code>的进程ID，使用<code>kill -9 &lt;pid&gt;</code>杀掉进程。</p>
+<h1 id="导入clion并运行调试">导入<code>CLion</code>并运行/调试</h1>
+<ol>
+<li>导入<code>CLion</code></li>
+<li>设置<code>CMake</code>参数。点击<code>File</code>菜单栏，<code>Settings | Build, Execution, Deployment | CMake</code>，在<code>CMake options</code>输入框中输入上文执行<code>cmake</code>命令时的参数。<br>
+<img src="https://keaper-cn-image.oss-cn-beijing.aliyuncs.com/20200726235304.png" alt="" loading="lazy"></li>
+<li>运行/调试<code>MySQL</code>。点击<code>Run</code>菜单栏，<code>Edit Configurations</code>，左侧<code>CMake Application</code>列出了<code>MySQL</code>中的各个程序，例如<code>mysqld</code>为<code>MySQL Server</code>，<code>mysql</code>为<code>MySQL CLient</code>，可以在对应的<code>Program arguments</code>中配置各种参数。</li>
+</ol>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="https://dev.mysql.com/doc/refman/5.7/en/source-installation.html">Installing MySQL from Source</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/5.7/en/postinstallation.html">Postinstallation Setup and Testing</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/5.7/en/server-options.html">Server Command Options</a></li>
+<li><a href="https://dev.mysql.com/doc/refman/5.7/en/multiple-servers.html">Running Multiple MySQL Instances on One Machine</a></li>
+</ol>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[使用CLion调试Redis(Ubuntu 16.04 + MacOS 10.15)]]></title>
         <id>https://jiawanggjia.github.io/post/bs-IxGChu/</id>

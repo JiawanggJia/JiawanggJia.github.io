@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>Java中的遍历（遍历集合或数组的几种方式） | Keaper&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1597943163978">
+<link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="本文主要总结了Java中遍历集合或数组的几种方式，并介绍了各种遍历方式的实现原理，以及一些最佳实践。最后介绍了Java集合类迭代器的快速失败（fail-fast）机制。
+
+Java中的循环结构
+遍历必然需要使用到循环结构，Java中有以下几..." />
+    <meta name="keywords" content="JAVA" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://jiawanggjia.github.io">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1597943163978" class="site-logo">
+        <h1 class="site-title">Keaper&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/JiawanggJia/" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      帝都码农一枚
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://jiawanggjia.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">Java中的遍历（遍历集合或数组的几种方式）</h2>
+            <div class="post-date">2020-08-19</div>
+            
+            <div class="post-content" v-pre>
+              <p>本文主要总结了<code>Java</code>中遍历集合或数组的几种方式，并介绍了各种遍历方式的实现原理，以及一些最佳实践。最后介绍了<code>Java</code>集合类迭代器的快速失败（<code>fail-fast</code>）机制。</p>
+<!-- more -->
+<h1 id="java中的循环结构">Java中的循环结构</h1>
+<p>遍历必然需要使用到循环结构，<code>Java</code>中有以下几种循环结构：</p>
+<ol>
+<li><code>while</code>语句</li>
+<li><code>do...while</code>语句</li>
+<li>基本<code>for</code>语句</li>
+<li>增强<code>for</code>语句</li>
+</ol>
+<p>对于<code>do...while</code>语句，其第一个循环体是必须会执行的，这对于空集合或者空数组是不适用的。所以我们一般不会使用<code>do...while</code>语句来进行遍历。其余三种都是我们经常用来遍历的语法结构。</p>
+<blockquote>
+<p><code>for</code>语句和<code>while</code>语句在一般情况下可以互相转化，下文我们并不将两种语句单独区分，会根据场景选择使用更加简单的方式。</p>
+</blockquote>
+<h1 id="遍历数组">遍历数组</h1>
+<h2 id="1-使用下标遍历">1. 使用下标遍历</h2>
+<p>使用循环遍历数组下标范围，在循环体中用下标访问数组元素：</p>
+<pre><code class="language-java">for (int i = 0; i &lt; array.length; i++) {
+    System.out.println(array[i]);
+}
+</code></pre>
+<h2 id="2-增强for循环">2. 增强for循环</h2>
+<p>使用增强<code>for</code>循环语法结构来对数组进行遍历：</p>
+<pre><code class="language-java">for (int value : array) {
+    System.out.println(value);
+}
+</code></pre>
+<p>增强<code>for</code>循环 其实只是一种语法糖，使用 增强<code>for</code>循环 在遍历数组时，在编译过程会将其转化为 &quot;使用下标遍历&quot; 的方式，在字节码层面其实等价于第一种方式，效率上也没有太大差别。</p>
+<p>关于增强<code>for</code>循环语法更详细的介绍，请移步：<a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.14.2">Java Language Specification - 14.14.2. The enhanced for statement</a></p>
+<h1 id="java中的迭代器">JAVA中的迭代器</h1>
+<p>在 面向对象编程里，迭代器模式是一种设计模式，是一种最简单也最常见的设计模式。迭代器模式提供了一种方法顺序访问一个集合对象中的各个元素，而又不暴露其内部的表示。<code>Java</code>中也提供了对迭代器模式的支持，主要是针对<code>Java</code>的各种集合类进行遍历。</p>
+<p><code>Iterator</code>接口是<code>Java</code>中对迭代器的抽象接口定义，其定义如下：</p>
+<pre><code class="language-java">public interface Iterator&lt;E&gt; {
+    // 是否还有下一个元素
+    boolean hasNext();
+    // 返回下一个元素
+    E next();
+    // 删除迭代过程中最近访问的一个元素
+    // 也就是在next()之后调用remove()删除刚刚next()返回的元素
+    default void remove() {
+        throw new UnsupportedOperationException(&quot;remove&quot;);
+    }
+}
+</code></pre>
+<p><code>Iterable</code>接口是在<code>Java 1.5</code>中引入的，为了用来支持增强型<code>for</code>循环，只有实现了<code>Iterable</code>接口的对象才可以使用增强型<code>for</code>循环。<code>Iterable</code>接口定义如下：</p>
+<pre><code class="language-java">public interface Iterable&lt;T&gt; {
+    // 返回迭代器
+    Iterator&lt;T&gt; iterator();
+    // 使用函数式接口对增强型for循环进行包装，可以方便地使用lambda表达式来进行遍历
+    default void forEach(Consumer&lt;? super T&gt; action) {
+        Objects.requireNonNull(action);
+        for (T t : this) {
+            action.accept(t);
+        }
+    }
+}
+</code></pre>
+<p>可以看到<code>Iterable</code>接口提供了<code>forEach</code>方法的默认实现，函数参数是一个函数式接口<code>action</code>参数来表示对遍历到的每个元素的操作行为，实现逻辑是使用 增强<code>for</code>循环 遍历自身，循环中对每个元素都应用 参数<code>action</code>所表示的操作行为。</p>
+<h1 id="遍历list">遍历List</h1>
+<h2 id="list接口的定义">List接口的定义</h2>
+<p><code>List</code>表示的是一个有序的元素集合。<code>List</code>接口继承了<code>Collection</code>接口，<code>Collection</code>接口又继承了<code>Iterable</code>接口，其定义如下：</p>
+<pre><code class="language-java">public interface Iterable&lt;T&gt; {
+    // 返回Iterator迭代器
+    Iterator&lt;T&gt; iterator();
+}
+public interface Collection&lt;E&gt; extends Iterable&lt;E&gt; {
+}
+public interface List&lt;E&gt; extends Collection&lt;E&gt; {
+    // 获取指定位置的元素
+    E get(int index);
+    // 获取ListIterator迭代器
+    ListIterator&lt;E&gt; listIterator();
+    // 从指定位置获取ListIterator迭代器
+    ListIterator&lt;E&gt; listIterator(int index);
+}
+</code></pre>
+<p>可以看到<code>List</code>除了可以通过<code>iterator()</code>方法获得<code>Iterator</code>迭代器之外，还可以通过<code>listIterator()</code>方法获得<code>ListIterator</code>迭代器。<code>ListIterator</code>迭代器相比于<code>Iterator</code>迭代器之外，访问和操作元素的方法更加丰富：</p>
+<ol>
+<li><code>Iterator</code>只能向后迭代，而<code>ListIterator</code>可以向两个方向迭代</li>
+<li><code>Iterator</code>只能在迭代过程中删除元素，而<code>ListIterator</code>可以添加元素、删除元素、修改元素。</li>
+</ol>
+<pre><code class="language-java">public interface ListIterator&lt;E&gt; extends Iterator&lt;E&gt; {
+    // Query Operations
+    // 是否还有后一个元素
+    boolean hasNext();
+    // 访问后一个元素
+    E next();
+    // 是否还有前一个元素
+    boolean hasPrevious();
+    // 访问前一个元素
+    E previous();
+    // 后一个元素的下标
+    int nextIndex();
+    // 前一个元素的下标
+    int previousIndex();
+
+    // Modification Operations
+    // 删除元素
+    void remove();
+    // 修改元素
+    void set(E e);
+    // 添加元素      
+    void add(E e);
+}
+</code></pre>
+<h2 id="list的遍历方法">List的遍历方法</h2>
+<h3 id="1-使用下标遍历-2">1. 使用下标遍历</h3>
+<p><code>List</code>接口提供了<code>get</code>方法来访问指定位置的元素，所以与遍历数组一样，<code>List</code>也可以通过遍历<code>List</code>下标并使用<code>get</code>方法访问元素来遍历<code>List</code>：</p>
+<pre><code class="language-java">for (int i = 0; i &lt; list.size(); i++) {
+    System.out.println(list.get(i));
+}
+</code></pre>
+<h3 id="2-使用iterator迭代器">2. 使用Iterator迭代器</h3>
+<p><code>List</code>可以使用继承自<code>Iterable</code>接口的<code>iterator()</code>方法来获得<code>Iterator</code>迭代器，使用<code>Iterator</code>迭代器来遍历<code>List</code>：</p>
+<pre><code class="language-java">Iterator&lt;Integer&gt; iterator = list.iterator();
+while (iterator.hasNext()){
+    System.out.println(iterator.next());
+}
+</code></pre>
+<h3 id="3-使用listiterator迭代器">3. 使用ListIterator迭代器</h3>
+<p><code>List</code>还可以使用<code>listIterator()</code>方法来获得<code>ListIterator</code>迭代器，使用<code>ListIterator</code>迭代器来遍历<code>List</code>：</p>
+<pre><code class="language-java">ListIterator&lt;Integer&gt; listIterator = list.listIterator();
+while (listIterator.hasNext()){
+    System.out.println(listIterator.next());
+}
+// ListIterator 可以向前遍历
+listIterator = list.listIterator(list.size() - 1);
+while (listIterator.hasPrevious()){
+    System.out.println(listIterator.previous());
+}
+</code></pre>
+<h3 id="4-增强for循环">4. 增强for循环</h3>
+<p>我们前面说到，实现了<code>Iterable</code>接口的对象可以使用增强<code>for</code>循环遍历。<code>List</code>接口继承自<code>Iterable</code>接口，所以可以使用增强<code>for</code>循环来遍历<code>List</code>：</p>
+<pre><code class="language-java">for (Integer value : list) {
+    System.out.println(value);
+}
+</code></pre>
+<p>增强性<code>for</code>循环是一种语法糖，但是与遍历数组不一样的是，使用增强型<code>for</code>循环在遍历实现了<code>Iterable</code>接口的对象时，会在编译过程中将其转化为使用<code>Iterator</code>迭代器进行遍历的方式。所以这种方式本质上与上一种方式是一样的。</p>
+<p>关于增强<code>for</code>循环语法更详细的介绍，请移步：<a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.14.2">Java Language Specification - 14.14.2. The enhanced for statement</a></p>
+<h3 id="5-iterable接口的foreach方法">5. Iterable接口的forEach方法</h3>
+<p>List接口实现了<code>Iterable</code>接口，<code>Iterable</code>接口中提供了<code>forEach</code>方法来更加方便的遍历集合。其参数是一个函数式接口<code>action</code>，来表示对遍历到的每个元素的操作行为。并且因为参数是一个函数式接口，所以我们可以使用<code>lamdba</code>表达式更简洁的表达遍历过程。</p>
+<p><code>Iterable</code>接口的<code>forEach</code>方法的默认实现是使用增强<code>for</code>循环来遍历自身。所以如果没有重写<code>forEach</code>方法的话，这种方式本质上与上一种方式是一样的。</p>
+<pre><code class="language-java">list.forEach(value -&gt; System.out.println(value));
+list.forEach(System.out::println);
+</code></pre>
+<h2 id="最佳实践">最佳实践</h2>
+<p>上面几种方式其实本质上来讲只有两种方式：</p>
+<ol>
+<li>使用循环遍历集合的下标范围，配合<code>get</code>方法获取集合元素 来遍历<code>List</code>。</li>
+<li>使用迭代器（<code>Iterator</code>或<code>ListIterator</code>）来遍历<code>List</code>。</li>
+</ol>
+<p>其余方式都只不过是第二种方式的语法糖或其变种。<br>
+那么到底应该使用哪种方式更好呢？这取决于<code>List</code>的内部实现方式。</p>
+<p><code>List</code>的常用实现数据结构有两种，<code>数组</code>和<code>链表</code>：</p>
+<ol>
+<li>对于数组实现的<code>List</code>及其对应的<code>Iterator</code>/<code>ListIterator</code>实现来说，比如<code>ArrayList</code>、<code>Vector</code>。<code>List.get()</code>方法、<code>Iterator.next()</code>方法、<code>ListIterator.next()</code>方法、<code>ListIterator.previous()</code>方法的时间复杂度都为<code>O(1)</code>。所以使用下标遍历所有元素的时间复杂度为<code>O(N)</code>，使用迭代器遍历所有元素的时间复杂度也为<code>O(N)</code>。但是下标遍历的方式执行的代码更少更简单，所以效率稍高。</li>
+<li>而对于链表实现的<code>List</code>其对应的<code>Iterator</code>/<code>ListIterator</code>实现来说，<code>List.get()</code>方法的时间复杂度为<code>O(N)</code>，<code>Iterator.next()</code>方法、<code>ListIterator.next()</code>方法、<code>ListIterator.previous()</code>方法的时间复杂度都为<code>O(1)</code>。所以使用下标遍历所有元素的时间复杂度为<code>O(N*N)</code>，使用迭代器遍历所有元素的时间复杂度为<code>O(N)</code>。所以使用迭代器遍历效率更高。</li>
+</ol>
+<p><code>Java</code>集合框架中，提供了一个<code>RandomAccess</code>接口，该接口没有方法，只是一个标记。通常被<code>List</code>接口的实现类使用，用来标记该<code>List</code>的实现类是否支持<code>Random Access</code>。一个集合类实现了该接口，就意味着它支持<code>Random Access</code>，按位置读取元素的平均时间复杂度为<code>O(1)</code>，比如<code>ArrayList</code>。而没有实现该接口的，就表示不支持<code>Random Access</code>，比如<code>LinkedList</code>。所以推荐的做法就是，如果想要遍历一个<code>List</code>，<strong>如果其实现了<code>RandomAccess</code>接口，那么使用下标遍历效率更高，否则的话使用迭代器遍历效率更高</strong>。</p>
+<h1 id="遍历set">遍历Set</h1>
+<h2 id="set接口的定义">Set接口的定义</h2>
+<pre><code class="language-java">public interface Iterable&lt;T&gt; {
+    // 返回Iterator迭代器
+    Iterator&lt;T&gt; iterator();
+}
+public interface Collection&lt;E&gt; extends Iterable&lt;E&gt; { }
+public interface Set&lt;E&gt; extends Collection&lt;E&gt; { }
+</code></pre>
+<h2 id="set的遍历方法">Set的遍历方法</h2>
+<p>相较于<code>List</code>，<code>Set</code>是无序的，所以<code>Set</code>没有通过下标获取元素的<code>get</code>方法，也就没办法使用下标来遍历。<code>Set</code>也没有类似<code>ListIterator</code>一样特殊的迭代器。所以遍历<code>Set</code>只能使用<code>Iterator</code>迭代器来遍历。下面三种方式其实本质上都是使用<code>Iterator</code>迭代器来遍历，后两种方式只是第一种方式的语法糖或者变种。</p>
+<h3 id="1-使用iterator迭代器">1. 使用Iterator迭代器</h3>
+<p><code>Set</code>接口同样继承了<code>Iterable</code>的<code>iterator()</code>方法，可以使用其返回的<code>Iterator</code>迭代器来遍历<code>Set</code>：</p>
+<pre><code class="language-java">Iterator&lt;Integer&gt; iterator = set.iterator();
+while (iterator.hasNext()){
+    System.out.println(iterator.next());
+}
+</code></pre>
+<h3 id="2-增强for循环-2">2. 增强for循环</h3>
+<p><code>Set</code>接口实现了<code>Iterable</code>接口，所以也可以使用增强型<code>for</code>循环来遍历<code>Set</code>：</p>
+<pre><code class="language-java">for (Integer value : set) {
+    System.out.println(value);
+}
+</code></pre>
+<h3 id="3-iterable接口的foreach方法">3. Iterable接口的forEach方法</h3>
+<p><code>Set</code>接口实现了<code>Iterable</code>接口，所以也可以使用<code>forEach</code>方法来遍历<code>Set</code>：</p>
+<pre><code class="language-java">set.forEach(value -&gt; System.out.println(value));
+set.forEach(System.out::println);
+</code></pre>
+<h1 id="遍历map">遍历Map</h1>
+<p>不同于<code>List</code>，<code>Map</code>并不是一组元素的集合，而是一组键值对，所以<code>Map</code>没有继承<code>Collection</code>、<code>Iterable</code>等其他接口。</p>
+<h2 id="map接口的定义">Map接口的定义</h2>
+<pre><code class="language-java">public interface Map&lt;K,V&gt; {
+    // 返回Map中键的集合
+    Set&lt;K&gt; keySet();
+    // 返回Map中值的集合
+    Collection&lt;V&gt; values();
+    // 返回Map中键值对的集合
+    Set&lt;Map.Entry&lt;K, V&gt;&gt; entrySet();
+    // 类似于Iterable接口的forEach方法
+    default void forEach(BiConsumer&lt;? super K, ? super V&gt; action) {
+        Objects.requireNonNull(action);
+        for (Map.Entry&lt;K, V&gt; entry : entrySet()) {
+            K k;
+            V v;
+            try {
+                k = entry.getKey();
+                v = entry.getValue();
+            } catch(IllegalStateException ise) {
+                // this usually means the entry is no longer in the map.
+                throw new ConcurrentModificationException(ise);
+            }
+            action.accept(k, v);
+        }
+    }
+}
+</code></pre>
+<p><code>Map</code>提供了<code>keySet()</code>、<code>values()</code>、<code>entrySet()</code>方法来分别获取<code>Map</code>的 键集合、值集合、键值对集合。并且提供了类似于<code>Iterable</code>的<code>forEach</code>方法及其默认实现。</p>
+<h2 id="map的遍历方法">Map的遍历方法</h2>
+<p>遍历<code>Map</code>可以通过先获取其 键集合、值集合、键值对集合，然后根据返回的集合类型选择不同的遍历方式。</p>
+<p>同时，<code>Map</code>也提供了类似于<code>Iterable</code>的<code>forEach</code>方法，参数<code>action</code>是一个函数式接口，指定了对于每一个键值对的操作行为，实现逻辑是使用增强<code>for</code>循环遍历<code>Map</code>的<code>entrySet()</code>方法的返回值，对于每一个遍历到的每一个键值对，应用参数<code>action</code>代表的操作行为。</p>
+<h1 id="java集合中的快速失败机制">Java集合中的快速失败机制</h1>
+<h2 id="何为快速失败">何为快速失败</h2>
+<p><a href="https://en.wikipedia.org/wiki/Fail-fast">wikipedia</a>上对<code>快速失败（fail-fast）</code>的介绍是：</p>
+<blockquote>
+<p>In systems design, a fail-fast system is one which immediately reports at its interface any condition that is likely to indicate a failure. Fail-fast systems are usually designed to stop normal operation rather than attempt to continue a possibly flawed process.</p>
+</blockquote>
+<p>简单来说就是系统运行中，如果有错误发生，那么系统立即结束，而不是继续冒不确定的风险继续执行，这种设计就是&quot;<strong>快速失败</strong>&quot;。</p>
+<h2 id="java集合迭代器的快速失败机制">Java集合迭代器的快速失败机制</h2>
+<p><code>Java</code>集合框架中的一些集合类的迭代器也是被设计为<code>快速失败</code>的。集合迭代器中的快速失败机制是说：</p>
+<blockquote>
+<p>在使用迭代器遍历集合时，如果迭代器创建之后，通过 除了迭代器提供的修改方法之外 的其他方式对集合进行了结构性修改（添加、删除元素等），那么迭代器应该抛出一个<code>ConcurrentModificationException</code>异常，表示在此次遍历中集合发生了&quot;并发修改&quot;，应该提前终止迭代过程。因为在迭代器遍历集合的过程中，如果有别的行为改变了集合本身的结构，那么迭代器之后的行为可能就是不符合预期的，可能会出现错误的结果，所以提前检测并抛出异常是一个更好的做法。</p>
+</blockquote>
+<p><code>Java</code>中大部分基本的集合类的迭代器都实现了快速失败机制，包括<code>ArrayList</code>，<code>LinkedList</code>，<code>Vector</code>，<code>HashMap</code>，<code>HashSet</code>等等。但是对于并发集合类，例如<code>ConcurrentHashMap</code>，<code>CopyOnWriteArrayList</code>等，这些类本身就是设计来支持并发的，是线程安全的，所以也不存在快速失败这一说。</p>
+<p>以<code>ArrayList</code>为例，<a href="https://docs.oracle.com/javase/8/docs/api/java/util/ArrayList.html">ArrayList (Java Platform SE 8 )</a>中对<code>fail-fast</code>的介绍如下：</p>
+<blockquote>
+<p>The iterators returned by this class's iterator and listIterator methods are fail-fast: if the list is structurally modified at any time after the iterator is created, in any way except through the iterator's own remove or add methods, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.</p>
+</blockquote>
+<blockquote>
+<p><code>ArrayList</code>的<code>iterator</code>和<code>listIterator</code>方法返回的迭代器都是<code>fail-fast</code>的：如果在迭代器创建之后，通过除了迭代器自身的<code>add</code>/<code>remove</code>方法之外的其他方式，对<code>ArrayList</code>进行了结构性修改（添加、删除元素等），那么该迭代器应该抛出一个<code>ConcurrentModificationException</code>异常。所以，迭代器在面对并发修改时，迭代器将快速而干净地失败，而不是冒着在未来不确定的时间发生不确定行为的风险继续执行。</p>
+</blockquote>
+<h2 id="典型实践">典型实践</h2>
+<p>如果看过阿里的《JAVA开发手册》，会知道里面有这一条规范：</p>
+<blockquote>
+<p>【强制】不要在 <code>foreach</code> 循环里进行元素的 <code>remove</code>/<code>add</code> 操作。<code>remove</code> 元素请使用 <code>Iterator</code>方式，如果并发操作，需要对 <code>Iterator</code> 对象加锁。</p>
+</blockquote>
+<p>上面说的<code>foreach</code>循环指的上面我们提到的使用增强<code>for</code>循环进行遍历的方式。这种方式本质上使用的是迭代器方式。所以更明确一点，这个规范其实就是在说：</p>
+<blockquote>
+<p>在使用<code>Iterator</code>迭代器遍历集合过程中，不要通过集合本身的<code>remove</code>/<code>add</code>方法来进行元素的 <code>remove</code>/<code>add</code> 操作，<code>remove</code>请使用<code>Iterator</code>提供的<code>remove</code>方法。</p>
+</blockquote>
+<p><strong>正确</strong>方式：</p>
+<pre><code class="language-java">List&lt;Integer&gt; list = new ArrayList&lt;&gt;();
+list.add(1);
+list.add(2);
+list.add(3);
+Iterator&lt;Integer&gt; iterator = list.iterator();
+while (iterator.hasNext()) {
+    Integer item = iterator.next();
+    if (item == 1) {
+        iterator.remove();
+    }
+}
+list.forEach(System.out::println); // 输出 2 3 
+</code></pre>
+<p><strong>错误</strong>方式：</p>
+<pre><code class="language-java">List&lt;Integer&gt; list = new ArrayList&lt;&gt;();
+list.add(1);
+list.add(2);
+list.add(3);
+for (Integer item : list) {  // 会在这里抛出异常
+    if (item == 1) {
+        list.remove(item);  // 使用 list.remove 删除
+    }
+}
+list.forEach(System.out::println);
+</code></pre>
+<p>上述代码会在第五行抛出<code>java.util.ConcurrentModificationException</code>异常。因为其本质还是使用迭代器遍历，所以为了方便理解其原因，我们将上述方式改写为：</p>
+<pre><code class="language-java">List&lt;Integer&gt; list = new ArrayList&lt;&gt;();
+list.add(1);
+list.add(2);
+list.add(3);
+Iterator&lt;Integer&gt; iterator = list.iterator();
+while (iterator.hasNext()) {
+    Integer item = iterator.next();  // 会在这里抛出异常
+    if (item == 1) {
+        list.remove(item);  // 使用 list.remove 删除
+    }
+}
+list.forEach(System.out::println);
+</code></pre>
+<p>这段代码会在第<code>7</code>行抛出<code>java.util.ConcurrentModificationException</code>异常。与第一种方式的差别仅仅在于使用了<code>List.remove</code>方法而不是<code>Iterator.remove</code>方法。</p>
+<h2 id="快速失败的实现原理">快速失败的实现原理</h2>
+<p>以<code>ArrayList</code>为例来说明快速失败机制的实现原理，其他类的实现方式也是大致相同的。</p>
+<ol>
+<li><code>ArrayList</code>中有一个属性<code>modCount</code>，是一个记录<code>ArrayList</code>修改次数的计数器。</li>
+<li><code>ArrayList</code>的<code>iterator</code>/<code>listIterator</code>方法被调用时，会创建出<code>Iteartor</code>/<code>ListIterator</code>的实现类 <code>ArrayList.Itr</code>/<code>ArrayList.ListItr</code>迭代器对象，其中有一个属性<code>expectedModCount</code>。当迭代器被创建时，<code>ArrayList</code>本身的<code>modCount</code>将被复制给<code>Itr</code>/<code>ListItr</code>中的<code>expectedModCount</code>属性。</li>
+<li>当使用迭代器的<code>remove</code>/<code>add</code>方法增删元素时，在修改<code>ArrayList</code>的<code>modCount</code>之后，还会将其值复制给迭代器自身的<code>expectedModCount</code>。而通过<code>ArrayList</code>的<code>remove</code>/<code>add</code>方法增删元素时，仅仅修改了<code>ArrayList</code>的<code>modCount</code>。</li>
+<li>当迭代器执行<code>next</code>/<code>remove</code>/<code>add</code>/<code>set</code>操作时是会检查迭代器自身的<code>expectedModCount</code>与<code>ArrayList</code>的<code>modCount</code>是否相等，如果不相等则会抛出<code>ConcurrentModificationException</code>异常。</li>
+</ol>
+<p>所以在迭代过程中，如果只使用迭代器的<code>remove</code>/<code>add</code>方法增删元素，是不会出现问题的，因为在增删元素之后迭代器始终会将<code>ArrayList</code>的<code>modCount</code>值赋值给迭代器自身的<code>expectedModCount</code>，所以下次迭代两者一定相等。而如果迭代过程中使用了<code>ArrayList</code>的<code>remove</code>/<code>add</code>方法增删元素，或者有另外一个迭代器进行了增删元素，就会造成<code>ArrayList</code>中的<code>modCount</code>与迭代器中的<code>expectedModCount</code>不一致，抛出<code>ConcurrentModificationException</code>异常。</p>
+<h2 id="快速失败的bug">快速失败的&quot;bug&quot;</h2>
+<p>快速失败机制也不能够保证百分之百生效，例如，在下面这段代码中，使用迭代器遍历<code>ArrayList</code>过程中，使用<code>ArrayList</code>的<code>remove</code>方法删除倒数第二个元素，程序能够正确删除，并不会像我们上面所说的抛出<code>ConcurrentModificationException</code>异常。</p>
+<pre><code class="language-java">List&lt;Integer&gt; list = new ArrayList&lt;&gt;();
+list.add(1);
+list.add(2);
+list.add(3);
+Iterator&lt;Integer&gt; iterator = list.iterator();
+while (iterator.hasNext()) {
+    Integer item = iterator.next();
+    if (item == 2) {
+        list.remove(item);
+    }
+}
+list.forEach(System.out::println);  // 输出 1 3
+</code></pre>
+<p>这个&quot;<code>bug</code>&quot;发生的原因在于，在第二次执行<code>iterator.next()</code>后，迭代器记录的下一次将要访问的下标应该是<code>2</code>，而在执行<code>list.remove()</code>删除元素后，<code>list</code>的<code>size</code>变为了<code>2</code>，所以在下次执行<code>iterator.hasNext()</code>时认为已经没有元素要继续迭代了，返回<code>false</code>，结束循环。</p>
+<p>所以<code>fail-fast</code>机制并不能够完全保证所有的并发修改的情况都抛出<code>ConcurrentModificationException</code>异常，在程序中也不应该依赖于这个异常信息。<br>
+在<a href="https://docs.oracle.com/javase/8/docs/api/java/util/ArrayList.html">ArrayList (Java Platform SE 8 )</a>中也指出了<code>fail-fast</code>这一性质：</p>
+<blockquote>
+<p>Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.</p>
+</blockquote>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-14.html#jls-14.14.2">The Java Language Specification, Java SE 8 Edition</a></li>
+<li><a href="https://blog.csdn.net/HJF_HUANGJINFU/article/details/51220253#t23">Java遍历集合的几种方法分析（实现原理、算法性能、适用场合）</a></li>
+<li><a href="https://docs.oracle.com/javase/8/docs/api/java/util/ArrayList.html">ArrayList (Java Platform SE 8 )</a></li>
+</ol>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://jiawanggjia.github.io/tag/Ein8Q-rH6/" class="tag">
+                    JAVA
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://jiawanggjia.github.io/post/mysql-57-bian-yi-diao-shi-zhi-nan-ubuntu-1604-macos-1015/">
+                  <h3 class="post-title">
+                    MySQL 5.7 编译调试指南(Ubuntu 16.04 + MacOS 10.15)
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

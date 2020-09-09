@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>OpenJDK 编译调试指南 - 番外篇 | Keaper&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1599673497335">
+<link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="作为OpenJDK 编译调试指南(Ubuntu 16.04 + MacOS 10.15)的番外篇，本文主要用来记录在调试OpenJDK过程过程中遇到的一些问题以及解决办法。
+
+如何编译&quot;零汇编(Zero-Assembler)&qu..." />
+    <meta name="keywords" content="OpenJDK,JAVA" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://jiawanggjia.github.io">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1599673497335" class="site-logo">
+        <h1 class="site-title">Keaper&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/JiawanggJia/" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      帝都码农一枚
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://jiawanggjia.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">OpenJDK 编译调试指南 - 番外篇</h2>
+            <div class="post-date">2020-09-03</div>
+            
+            <div class="post-content" v-pre>
+              <p>作为<a href="https://jiawanggjia.github.io/post/openjdk-bian-yi-zhi-nan/">OpenJDK 编译调试指南(Ubuntu 16.04 + MacOS 10.15)</a>的番外篇，本文主要用来记录在调试<code>OpenJDK</code>过程过程中遇到的一些问题以及解决办法。</p>
+<!-- more -->
+<h1 id="如何编译零汇编zero-assembler的openjdk">如何编译&quot;零汇编(Zero-Assembler)&quot;的OpenJDK</h1>
+<p>在使用<code>JetBrains CLion</code>调试<code>OpenJDK</code>的过程中，发现有时候<code>Call Stack</code>中有一部分是汇编代码，导致我们无法完全探究其内部实现。有没有办法能够不使用这部分汇编代码呢？</p>
+<p>首先我们来看下为什么会存在部分汇编代码？</p>
+<h2 id="为什么存在部分汇编代码">为什么存在部分汇编代码？</h2>
+<p>从 <a href="https://openjdk.java.net/groups/hotspot/docs/RuntimeOverview.html#Interpreter%7Coutline">HotSpot Runtime Overview - Interpreter</a> 了解到，<code>HotSpot</code>为了提高性能，使用了基于模板的解释器（<code>template based interpreter</code>）来解释执行<code>JAVA虚拟机指令</code>，<code>JVM</code>在启动时会根据<code>TemplateTable</code>（与每个字节码对应的汇编代码）来生成解释器，所以说这个解释器其实是部分基于汇编代码实现的。除了解释器之外，在<code>OpenJDK</code>项目中还有一些部分也是基于汇编代码的，例如<code>即时编译器JIT</code>（<code>C1</code>编译器，<code>C2</code>编译器）等，但汇编代码是依赖于硬件架构的，这种做法在提升了性能的同时却降低了可移植性。</p>
+<p><code>OpenJDK</code>社区的<code>IcedTea</code>项目提供了一种比较通用的移植方法，使得<code>OpenJDK</code>可以在所有的<code>Linux</code>系统上构建， 而无需进一步进行移植工作。</p>
+<h2 id="icedtea项目">IcedTea项目</h2>
+<p><code>IcedTea</code>项目最初的出现是因为<code>Sun</code>公司在发布<code>JDK</code>时，类库的一些部分由于产权原因没有发布其源代码，而是仅以二进制插件的形式提供， 因为这部分源代码属于受版权保护的第三方。<code>IcedTea</code>的主要目标就是提供这些二进制插件的免费等效替代品，使得完全使用免费开源软件构建<code>JDK</code>成为可能。</p>
+<p>此外，<code>IdeaTea</code>还做了很多工作以促进用户更容易地构建和部署<code>JDK</code>，其中包括将<code>OpenJDK</code>移植到更多的平台。</p>
+<p>因为<code>OpenJDK</code>的代码中除了 <code>C++</code> 代码之外还包含许多汇编代码，而<code>OpenJDK</code>支持的硬件平台架构有限，远远少于<code>Linux</code>系统所支持的。于是<code>IcedTea</code>的子项目<code>Zero</code>出现了，<code>Zero</code>项目旨在通过移除<code>OpenJDK</code>项目代码中的与平台相关的汇编代码，使用纯<code>C++</code>来替代，从而可以在任何 <code>Linux</code> 系统上构建，而无需进一步进行移植工作。</p>
+<blockquote>
+<p>这也正是标题中&quot;零汇编&quot;的含义所在，就是指不使用汇编代码来构建<code>OpenJDK</code>。</p>
+</blockquote>
+<p><code>OpenJDK</code> 的虚拟机在很大程度上依赖 <code>JIT（即时编译器）</code> 编译来提高性能。而<code>Zero</code>中只包含一个纯<code>C++</code>解释器，<code>Zero</code> 在相同的硬件上要比原始（<code>vanilla</code>）的 <code>OpenJDK</code> 慢得多。于是又一个子项目<code>Shark</code>出现了， <code>Shark</code>使用 <code>LLVM</code> 来即时编译 <code>Java</code> 方法，从而在不引入系统特定的代码的情况下提高性能。</p>
+<h2 id="如何实现零汇编zero-assembler">如何实现&quot;零汇编(Zero-Assembler)&quot;</h2>
+<p>到这里我们已经明白了，使用<code>zero</code>来构建<code>OpenJDK</code>就可以实现&quot;零汇编(<code>Zero-Assembler</code>)&quot;，那么如何使用呢？目前<code>Zero</code>和<code>Shark</code>已经集成到了<code>OpenJDK</code>的主分支中，只要在配置<code>OpenJDK</code>的时候指定参数<code>--with-jvm-variants=zero</code>重新编译即可。</p>
+<pre><code class="language-shell">sh ./configure  --with-jvm-variants=zero # 未列出全部参数
+make all
+</code></pre>
+<h2 id="参考资料">参考资料</h2>
+<ol>
+<li><a href="https://openjdk.java.net/groups/hotspot/docs/RuntimeOverview.html#Interpreter%7Coutline">HotSpot Runtime Overview - Interpreter</a></li>
+<li><a href="https://jerboaa.fedorapeople.org/presentations/OpenJDK_Zero_FOSDEM_2015-02-01.pdf">Sustaining the zero assembler port in OpenJDK: An inside perspective of CPU specific issues</a></li>
+<li><a href="https://metebalci.com/blog/demystifying-the-jvm-jvm-variants-cppinterpreter-and-templateinterpreter/">Demystifying the JVM: JVM Variants, Cppinterpreter and TemplateInterpreter</a></li>
+<li><a href="https://openjdk.java.net/projects/icedtea/">OpenJDK: IcedTea Project</a></li>
+<li><a href="https://en.wikipedia.org/wiki/IcedTea">IcedTea - Wikipedia</a></li>
+<li><a href="https://icedtea.classpath.org/wiki/Main_Page">Main Page - IcedTea</a></li>
+<li><a href="https://openjdk.java.net/projects/zero/">Zero-Assembler Project</a></li>
+<li><a href="https://icedtea.classpath.org/wiki/ZeroSharkFaq">ZeroSharkFaq - IcedTea</a></li>
+<li><a href="http://cr.openjdk.java.net/~ihse/docs/new-hotspot-build.html">The New Hotspot Build System</a></li>
+</ol>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://jiawanggjia.github.io/tag/openjdk/" class="tag">
+                    OpenJDK
+                  </a>
+                
+                  <a href="https://jiawanggjia.github.io/tag/Ein8Q-rH6/" class="tag">
+                    JAVA
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://jiawanggjia.github.io/post/java-zhong-de-bian-li/">
+                  <h3 class="post-title">
+                    Java中的遍历（遍历集合或数组的几种方式）
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>如何编译&#34;零汇编(Zero-Assembler)&#34;的OpenJDK | Keaper&#39;s Blog</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://jiawanggjia.github.io/favicon.ico?v=1600131886925">
+<link rel="stylesheet" href="https://jiawanggjia.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="在使用JetBrains CLion调试OpenJDK的过程中，有时候会发现Call Stack中有一部分是汇编代码，导致无法完全探究其内部实现。本文主要针对此问题给出了如何在不引入汇编代码（零汇编，Zero-Assembler）的情况下完..." />
+    <meta name="keywords" content="OpenJDK,JAVA" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://jiawanggjia.github.io">
+        <img src="https://jiawanggjia.github.io/images/avatar.png?v=1600131886925" class="site-logo">
+        <h1 class="site-title">Keaper&#39;s Blog</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+          <a class="social-link" href="https://github.com/JiawanggJia/" target="_blank">
+            <i class="fab fa-github"></i>
+          </a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      帝都码农一枚
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://jiawanggjia.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">如何编译&#34;零汇编(Zero-Assembler)&#34;的OpenJDK</h2>
+            <div class="post-date">2020-09-15</div>
+            
+            <div class="post-content" v-pre>
+              <p>在使用<code>JetBrains CLion</code>调试<code>OpenJDK</code>的过程中，有时候会发现<code>Call Stack</code>中有一部分是汇编代码，导致无法完全探究其内部实现。本文主要针对此问题给出了如何在不引入汇编代码（零汇编，<code>Zero-Assembler</code>）的情况下完成<code>OpenJDK</code>项目的编译和调试。</p>
+<!-- more -->
+<blockquote>
+<p>在<a href="https://jiawanggjia.github.io/post/openjdk-bian-yi-zhi-nan/">OpenJDK 编译调试指南</a>一文中，已经详细介绍了编译调试<code>OpenJDK</code>的步骤，这里不再详述具体过程。</p>
+</blockquote>
+<h1 id="为什么存在部分汇编代码">为什么存在部分汇编代码？</h1>
+<p>首先我们来看下为什么会存在部分汇编代码，以及这部分汇编代码是什么？<br>
+从 <a href="https://openjdk.java.net/groups/hotspot/docs/RuntimeOverview.html#Interpreter%7Coutline">HotSpot Runtime Overview - Interpreter</a> 了解到，<code>HotSpot</code>为了提高性能，使用了基于模板的解释器（<code>template based interpreter</code>）来解释执行<code>JAVA虚拟机指令</code>，<code>JVM</code>在启动时会根据<code>TemplateTable</code>（与每个字节码对应的汇编代码）来生成解释器，所以说这个解释器其实是部分基于汇编代码实现的。除了解释器之外，在<code>OpenJDK</code>项目中还有一些部分也是基于汇编代码的，例如<code>即时编译器JIT</code>（<code>C1</code>编译器，<code>C2</code>编译器）等，但汇编代码是依赖于硬件架构的，这种做法在提升了性能的同时却降低了可移植性。</p>
+<p><code>OpenJDK</code>社区的<code>IcedTea</code>项目提供了一种比较通用的移植方法，使得<code>OpenJDK</code>可以在所有的<code>Linux</code>系统上构建， 而无需进一步进行移植工作。</p>
+<h1 id="icedtea项目">IcedTea项目</h1>
+<p><code>IcedTea</code>项目最初的出现是因为<code>Sun</code>公司在发布<code>JDK</code>时，类库的一些部分由于产权原因没有发布其源代码，而是仅以二进制插件的形式提供， 因为这部分源代码属于受版权保护的第三方。<code>IcedTea</code>的主要目标就是提供这些二进制插件的免费等效替代品，使得完全使用免费开源软件构建<code>JDK</code>成为可能。</p>
+<p>此外，<code>IdeaTea</code>还做了很多工作以促进用户更容易地构建和部署<code>JDK</code>，其中包括将<code>OpenJDK</code>移植到更多的平台。</p>
+<p>因为<code>OpenJDK</code>的代码中除了 <code>C++</code> 代码之外还包含许多汇编代码，而<code>OpenJDK</code>支持的硬件平台架构有限，远远少于<code>Linux</code>系统所支持的。于是<code>IcedTea</code>的子项目<code>Zero</code>出现了，<code>Zero</code>项目旨在通过移除<code>OpenJDK</code>项目代码中的与平台相关的汇编代码，使用纯<code>C++</code>来替代，从而可以在任何 <code>Linux</code> 系统上构建，而无需进一步进行移植工作。</p>
+<blockquote>
+<p>这也正是标题中&quot;零汇编&quot;的含义所在，就是指不使用汇编代码来构建<code>OpenJDK</code>。</p>
+</blockquote>
+<p><code>OpenJDK</code> 的虚拟机在很大程度上依赖 <code>JIT（即时编译器）</code> 编译来提高性能。而<code>Zero</code>中只包含一个纯<code>C++</code>解释器，<code>Zero</code> 在相同的硬件上要比原始（<code>vanilla</code>）的 <code>OpenJDK</code> 慢得多。于是又一个子项目<code>Shark</code>出现了， <code>Shark</code>使用 <code>LLVM</code> 来即时编译 <code>Java</code> 代码，从而在不引入系统特定的代码的情况下提高性能。</p>
+<h1 id="如何实现零汇编zero-assembler">如何实现&quot;零汇编(Zero-Assembler)&quot;</h1>
+<p>到这里我们已经明白了，使用<code>zero</code>来构建<code>OpenJDK</code>就可以实现&quot;零汇编(<code>Zero-Assembler</code>)&quot;，那么如何使用呢？目前<code>Zero</code>和<code>Shark</code>已经集成到了<code>OpenJDK</code>的主分支中，只要在配置<code>OpenJDK</code>的时候指定参数<code>--with-jvm-variants=zero</code>重新编译即可。</p>
+<blockquote>
+<p>虽然在<code>OpenJDK 8</code>中提供了<code>--with-jvm-variants=zeroshark</code>的配置项，但经过几番尝试发现并不能真正构建成功。根据<code>OpenJDK</code>社区的一些资料（<a href="https://bugs.openjdk.java.net/browse/JDK-8171853">[JDK-8171853] Remove Shark compiler - Java Bug System</a>、<a href="http://hg.openjdk.java.net/jdk-updates/jdk10u/rev/fb290fd1f9d4">jdk-updates/jdk10u: fb290fd1f9d4</a>）， <code>Shark</code>由于长期缺乏维护已经在<code>JDK 10</code>版本中被移除了，也不再支持配置<code>--with-jvm-variants=zeroshark</code>参数了。所以下文我们只考虑<code>Zero</code>而不设计<code>Shark</code>相关内容。</p>
+</blockquote>
+<blockquote>
+<p>这篇文章<a href="https://jerboaa.fedorapeople.org/presentations/OpenJDK_Zero_FOSDEM_2015-02-01.pdf">Sustaining the zero assembler port in OpenJDK: An inside perspective of CPU specific issues</a>比较形象地描述了<code>模板解释器</code>和<code>C++解释器</code>的区别，以及如何构建<code>zero</code>版的<code>OpenJDK</code>，推荐阅读。</p>
+</blockquote>
+<p>下面主要记录一下在<code>MacOS</code>和<code>Ubuntu</code>平台下编译<code>Zero</code>版<code>OpenJDK</code>所遇到的问题。</p>
+<h2 id="ubuntu-1604">Ubuntu 16.04</h2>
+<p>在<code>Ubuntu 16.04</code>平台上编译<code>OpenJDK 8</code>时遇到的一个问题是缺少 <code>libffi</code> 依赖。运行<code>configure</code>时出现下面的错误信息：</p>
+<pre><code>checking for LIBFFI... configure: error: Package requirements (libffi) were not met:
+No package 'libffi' found
+</code></pre>
+<p>使用如下命令安装之后重新配置编译即可：</p>
+<pre><code class="language-bash">sudo apt-get install libffi-dev
+</code></pre>
+<p>在<code>Ubuntu 16.04</code>平台上编译<code>OpenJDK 11</code>时没有问题，很顺利就编译完成了。</p>
+<h2 id="macos-1015">MacOS 10.15</h2>
+<p>在<code>MacOS 10.15</code>平台上编译时遇到较多问题，主要原因是<code>OpenJDK</code>项目对<code>MacOS</code>平台编译<code>zero</code>版本 支持不够完善，导致有一些代码编译不通过。</p>
+<h3 id="openjdk-8">OpenJDK 8</h3>
+<ol>
+<li>运行<code>configure</code>出现下面的错误信息：</li>
+</ol>
+<pre><code>checking for LIBFFI... configure: error: in `/Users/jiajiawang/Workspace/openjdk-jdk8u':
+configure: error: The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+</code></pre>
+<p>同样是因为缺少了<code>libffi</code>库，除了<code>libffi</code>之外还缺少<code>pkg-config</code>，使用<code>HomeBrew</code>安装这两个依赖即可：</p>
+<pre><code class="language-bash">brew install libffi pkg-config
+</code></pre>
+<ol start="2">
+<li><code>configure</code>完成，运行<code>make</code>时出现下面的错误信息：</li>
+</ol>
+<pre><code>/usr/bin/clang++  ...  ... ... openjdk-jdk8u/hotspot/src/share/vm/precompiled/precompiled.hpp -o precompiled.hpp.pch 
+clang: error: unsupported option '-gstabs'
+</code></pre>
+<p>这是因为<code>clang</code>不支持<code>gcc</code>的<code>-gstabs</code>选项，需要对<code>hotspot/make/bsd/makefiles/gcc.make</code>文件进行修改，修改内容如下：</p>
+<pre><code class="language-diff">   DEBUG_CFLAGS/ppc   = -g
+   DEBUG_CFLAGS += $(DEBUG_CFLAGS/$(BUILDARCH))
+   ifeq ($(DEBUG_CFLAGS/$(BUILDARCH)),)
+-  DEBUG_CFLAGS += -gstabs
++      ifeq ($(USE_CLANG), true)
++        # Clang doesn't understand -gstabs
++        DEBUG_CFLAGS += -g
++      else
++        DEBUG_CFLAGS += -gstabs
++      endif
+   endif
+</code></pre>
+<ol start="3">
+<li>继续运行<code>make</code>时出现下面的错误信息：</li>
+</ol>
+<pre><code>... ... ... /src/os/bsd/vm/os_perf_bsd.cpp:29:10: fatal error: 'vm_version_ext_x86.hpp' file not found
+#include &quot;vm_version_ext_x86.hpp&quot;
+         ^~~~~~~~~~~~~~~~~~~~~~~~
+</code></pre>
+<p>这里引入了错误的文件，需要对<code>hotspot/src/os/bsd/vm/os_perf_bsd.cpp</code>做如下修改，使其引入正确的<code>vm_version_ext_zero.hpp</code>文件：</p>
+<pre><code> #include &quot;memory/resourceArea.hpp&quot;
+ #include &quot;runtime/os.hpp&quot;
+ #include &quot;runtime/os_perf.hpp&quot;
+-#include &quot;vm_version_ext_x86.hpp&quot;
++
++#ifdef TARGET_ARCH_aarch32
++# include &quot;vm_version_ext_aarch32.hpp&quot;
++#endif
++#ifdef TARGET_ARCH_x86
++# include &quot;vm_version_ext_x86.hpp&quot;
++#endif
++#ifdef TARGET_ARCH_sparc
++# include &quot;vm_version_ext_sparc.hpp&quot;
++#endif
++#ifdef TARGET_ARCH_zero
++# include &quot;vm_version_ext_zero.hpp&quot;
++#endif
++#ifdef TARGET_ARCH_arm
++# include &quot;vm_version_ext_arm.hpp&quot;
++#endif
++#ifdef TARGET_ARCH_ppc
++# include &quot;vm_version_ext_ppc.hpp&quot;
++#endif
+</code></pre>
+<ol start="4">
+<li>继续运行<code>make</code>时出现下面的错误信息：</li>
+</ol>
+<pre><code>make[2]: *** No rule to make target ` ... ... openjdk-jdk8u/jdk/src/macosx/bin/zero/jvm.cfg', needed by ` ... ... openjdk-jdk8u/build/macosx-x86_64-normal-zero-slowdebug/jdk/lib/jvm.cfg'.  Stop.
+</code></pre>
+<p>缺少<code>jdk/src/macosx/bin/zero/jvm.cfg</code>文件，我们从其他目录拷贝一份过来：</p>
+<pre><code class="language-bash">mkdir -p jdk/src/macosx/bin/zero/
+cp jdk/src/macosx/bin/x86_64/jvm.cfg jdk/src/macosx/bin/zero
+</code></pre>
+<h3 id="openjdk-11">OpenJDK 11</h3>
+<ol>
+<li>运行<code>configure</code>出现下面的错误信息：</li>
+</ol>
+<pre><code>checking for ffi.h... no
+configure: error: Could not find libffi! 
+</code></pre>
+<p>同样是因为缺少<code>ligffi</code>依赖，与<code>OpenJDK 8</code>不同的是在<code>OpenJDK 11</code>中，安装 <code>libffi</code>之后需要通过<code>--with-libffi=&lt;path&gt;</code>来指定<code>libffi</code>的地址：</p>
+<pre><code class="language-bash"># 安装libffi
+brew install libffi
+# 配置
+sh ./configure ...省略其他参数... --with-jvm-variants=zero --with-libffi=/usr/local/Cellar/libffi/3.3/
+</code></pre>
+<ol start="2">
+<li><code>configure</code>完成，执行<code>make</code>出现下面的错误信息：</li>
+</ol>
+<pre><code>... ... ... /openjdk-jdk11u/src/hotspot/share/interpreter/bytecodeInterpreter.cpp:2926:13: error: 7 enumeration values not handled in switch: 'T_VOID', 'T_ADDRESS', 'T_NARROWOOP'... [-Werror,-Wswitch]
+    switch (istate-&gt;method()-&gt;result_type()) {
+            ^
+... ... ... /openjdk-jdk11u/src/hotspot/share/interpreter/bytecodeInterpreter.cpp:2926:13: note: add missing switch cases
+    switch (istate-&gt;method()-&gt;result_type()) {
+            ^
+</code></pre>
+<p>这是因为源代码中的<code>switch</code>语句没有处理所有的分支情况，所有<code>clang</code>给出了警告（<code>Diagnostic</code>）,导致编译不通过，我们可以通过<code>clang</code>的<code>-w</code>参数来取消所有的警告（<code>Diagnostic</code>），需要在配置时添加如下两个参数，重新编译即可：</p>
+<pre><code class="language-bash">sh ./configure  ...省略其他参数... --with-extra-cflags=-w --with-extra-cxxflags=-w
+</code></pre>
+<ol start="3">
+<li>继续运行<code>make</code>时出现下面的错误信息：</li>
+</ol>
+<pre><code>... ... ... /src/os/bsd/vm/os_perf_bsd.cpp:29:10: fatal error: 'vm_version_ext_x86.hpp' file not found
+#include &quot;vm_version_ext_x86.hpp&quot;
+         ^~~~~~~~~~~~~~~~~~~~~~~~
+</code></pre>
+<p>这里引入了错误的文件，需要对<code>src/hotspot/os/bsd/os_perf_bsd.cpp</code>做如下修改，使其引入正确的<code>vm_version_ext_zero.hpp</code>文件（与<code>OpenJDK 8</code>中稍有不同）：</p>
+<pre><code> #include &quot;runtime/os.hpp&quot;
+ #include &quot;runtime/os_perf.hpp&quot;
+ #include &quot;utilities/globalDefinitions.hpp&quot;
+-#include &quot;vm_version_ext_x86.hpp&quot;
++
++#include CPU_HEADER(vm_version_ext)
+</code></pre>
+<h1 id="参考资料">参考资料</h1>
+<ol>
+<li><a href="https://openjdk.java.net/groups/hotspot/docs/RuntimeOverview.html#Interpreter%7Coutline">HotSpot Runtime Overview - Interpreter</a></li>
+<li><a href="https://jerboaa.fedorapeople.org/presentations/OpenJDK_Zero_FOSDEM_2015-02-01.pdf">Sustaining the zero assembler port in OpenJDK: An inside perspective of CPU specific issues</a></li>
+<li><a href="https://metebalci.com/blog/demystifying-the-jvm-jvm-variants-cppinterpreter-and-templateinterpreter/">Demystifying the JVM: JVM Variants, Cppinterpreter and TemplateInterpreter</a></li>
+<li><a href="https://openjdk.java.net/projects/icedtea/">OpenJDK: IcedTea Project</a></li>
+<li><a href="https://en.wikipedia.org/wiki/IcedTea">IcedTea - Wikipedia</a></li>
+<li><a href="https://icedtea.classpath.org/wiki/Main_Page">Main Page - IcedTea</a></li>
+<li><a href="https://openjdk.java.net/projects/zero/">Zero-Assembler Project</a></li>
+<li><a href="https://icedtea.classpath.org/wiki/ZeroSharkFaq">ZeroSharkFaq - IcedTea</a></li>
+<li><a href="http://cr.openjdk.java.net/~ihse/docs/new-hotspot-build.html">The New Hotspot Build System</a></li>
+</ol>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://jiawanggjia.github.io/tag/openjdk/" class="tag">
+                    OpenJDK
+                  </a>
+                
+                  <a href="https://jiawanggjia.github.io/tag/Ein8Q-rH6/" class="tag">
+                    JAVA
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://jiawanggjia.github.io/post/java-string-mian-mian-guan/">
+                  <h3 class="post-title">
+                    Java String 面面观
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>
